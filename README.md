@@ -1,1 +1,1 @@
-# ippg_dccp
+# Índice de Participación con Perspectiva de Género (IPPG)
