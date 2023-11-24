@@ -86,16 +86,16 @@ inscritos = function(x,y) sqlQuery(con2,paste0(
 ) 
 
 
-start <- Sys.time()
-
-ins_2023 = lapply(10, function(x) inscritos(x,2023)) %>%
-  data.table::rbindlist()
-
-end <- Sys.time()
-difftime(end, start, units="mins")
+# start <- Sys.time()
+# 
+# ins_2023 = lapply((month(today())-1), function(x) inscritos(x,year(today()))) %>%
+#   data.table::rbindlist()
+# 
+# end <- Sys.time()
+# difftime(end, start, units="mins")
 
 # 
-saveRDS(ins_2023, file = paste0(gsub("-", "", today()),gsub(" ","_"," inscritos históricos en la plataforma.rds")))
+#saveRDS(ins_2023, file = paste0(gsub("-", "", today()),gsub(" ","_"," inscritos históricos en la plataforma.rds")))
 # #
 
 
@@ -166,22 +166,24 @@ login = function(x,y, window = -24) sqlQuery(con2, paste0(
 ))
 
 
-start <- Sys.time()
-log_ = lapply((month(today())-1), function(x) login(x, year(today()))) %>%
-  data.table::rbindlist()
-end <- Sys.time()
-difftime(end, start, units="mins")
+# start <- Sys.time()
+# log_ = lapply((month(today())-1), function(x) login(x, year(today()))) %>%
+#   data.table::rbindlist()
+# end <- Sys.time()
+# difftime(end, start, units="mins")
+# 
+# 
+# saveRDS(log_, file = paste0(gsub("-", "", today()),gsub(" ","_"," logueados en la plataforma 2023.rds")))
 
-
-saveRDS(log_, file = paste0(gsub("-", "", today()),gsub(" ","_"," logueados en la plataforma 2023.rds")))
-
-
+# NOTA: AL VOLVER MÁS ANCHA LA VENTANA MÓVIL (ROLLING WINDOW, NO SE ACTULIZAN LOS DATOS
+#                                             , SOSPECHO QUE LO BORRAN COMO HACEN CON EL
+#                                             TEMA DE LAS SESIONES)
 
 # 
 # 
 # 
 
-ofertan = function(x,y) sqlQuery(con2, paste0(
+ofertan = function(x,y, window = -36) sqlQuery(con2, paste0(
   "
               DECLARE @YEAR AS INT;
               DECLARE @MONTH AS INT;
@@ -190,7 +192,7 @@ ofertan = function(x,y) sqlQuery(con2, paste0(
               SET @MONTH = ",x,";
                 
               DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-              DECLARE @startDate datetime = dateadd(month, -24, @currentMonth)
+              DECLARE @startDate datetime = dateadd(month,",window,", @currentMonth)
               , @endDate datetime = dateadd(month, 1, @currentMonth);
               
               WITH TEMP as(
@@ -199,13 +201,14 @@ ofertan = function(x,y) sqlQuery(con2, paste0(
                     UPPER(C.orgTaxID) [Rut Proveedor]
                     ,C.orgEnterprise [EntCode]
                     ,C.orgLegalName [Razon Social]
-                    ,'Oferta en licitaciones (o convenio Marco)' as [Tipo de participacion] 
+                    ,'Oferta en licitaciones (o convenio Marco)' as [Tipo de participacion]
+                    , A.bidEconomicIssueDate [Date]
               FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
               INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
               INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
               WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
-                    (A.bidEconomicIssueDate < @endDate) AND
-                    (A.bidEconomicIssueDate >= @startDate)
+                    (A.bidEconomicIssueDate <= @endDate) AND
+                    (A.bidEconomicIssueDate >= @startDate) 
           
                UNION
               
@@ -214,10 +217,11 @@ ofertan = function(x,y) sqlQuery(con2, paste0(
                     ,B.orgEnterprise [EntCode]
                     ,B.orgLegalName [Razon Social]
                     ,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
+                    , C.porSendDate [Date]
               FROM DCCPProcurement.dbo.prcPOCotizacion A
               INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
               INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
-              WHERE (C.porSendDate < @endDate) AND
+              WHERE (C.porSendDate <= @endDate) AND
               (C.porSendDate >= @startDate)
       
               UNION
@@ -227,10 +231,11 @@ ofertan = function(x,y) sqlQuery(con2, paste0(
               ,COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI [EntCode]
               ,B.orgLegalName [Razon Social]
               ,'Entrega cotización para Compra ágil' as [Tipo de participacion]
+              , SOLI.FechaCierre [Date]
               FROM DCCPCotizacion.dbo.SolicitudCotizacion as SOLI
               INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
               INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI =B.orgEnterprise
-              WHERE SOLI.FechaCierre <= @endDate
+              WHERE SOLI.FechaCierre BETWEEN @startDate AND @endDate
             	AND EstadoId = 2 -- enviada
             	)
             	
@@ -241,8 +246,8 @@ ofertan = function(x,y) sqlQuery(con2, paste0(
                   , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
                   , @MONTH [Mes Central]
                   , @YEAR [Anio Central]
-                  , @startDate [Comienzo]
                   , @endDate [Final]
+                  , T.Date [Fecha de emisión oferta]
             	FROM TEMP T
             	LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
                 FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
@@ -255,22 +260,22 @@ ofertan = function(x,y) sqlQuery(con2, paste0(
 )
 
 
-# start <- Sys.time()
-# ofertan_ = lapply(1:10, function(x) ofertan(x, 2023)) 
-# #%>%   data.table::rbindlist()
-# end <- Sys.time()
-# difftime(end, start, units="mins")
-# 
-# # 
-# saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
-# 
+start <- Sys.time()
+ofertan_ = lapply(((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
+  data.table::rbindlist()
+end <- Sys.time()
+difftime(end, start, units="mins")
+
+#
+saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
+
 
 
 # 
 #
 
 
-adjudican = function(x,y) sqlQuery(con2, paste0(
+adjudican = function(x,y,window = -36) sqlQuery(con2, paste0(
   "
       DECLARE @YEAR AS INT;
       DECLARE @MONTH AS INT;
@@ -279,7 +284,7 @@ adjudican = function(x,y) sqlQuery(con2, paste0(
       SET @MONTH = ",x,";
       
       DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-      DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
+      DECLARE @startDate datetime = dateadd(month,",window,", @currentMonth)
       , @endDate datetime = dateadd(month, 1, @currentMonth);
       
       /*Reciben una orden de compra*/
@@ -293,6 +298,7 @@ adjudican = function(x,y) sqlQuery(con2, paste0(
         , @YEAR [Anio Central]
         , @startDate [Comienzo]
         , @endDate [Final]
+        , A.porSendDate [Fecha de emisión orden de compra]
       
       FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
       INNER JOIN DCCPPlatform.dbo.gblOrganization O with(nolock) ON A.porSellerOrganization = O.orgCode
@@ -309,6 +315,7 @@ adjudican = function(x,y) sqlQuery(con2, paste0(
 
 ")
 )
+
 
 # start <- Sys.time()
 # adjudican_ = lapply(1:10, function(x) adjudican(x, 2023)) %>% 
@@ -341,7 +348,7 @@ adjudican = function(x,y) sqlQuery(con2, paste0(
 
 inscritos_ = readr::read_rds(details$files[grep("inscritos", details$files)][1])
 
-login_ = readr::read_rds(details$files[grep("logueados", details$files)][1])
+#login_ = readr::read_rds(details$files[grep("logueados", details$files)][1])
 
 ofertan_ = readr::read_rds(details$files[grep("ofertan", details$files)][1])
 
