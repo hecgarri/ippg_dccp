@@ -183,7 +183,7 @@ login = function(x,y, window = -24) sqlQuery(con2, paste0(
 # 
 # 
 
-ofertan = function(x,y, window = -36) sqlQuery(con2, paste0(
+ofertan = function(x,y, window = -12) sqlQuery(con2, paste0(
   "
               DECLARE @YEAR AS INT;
               DECLARE @MONTH AS INT;
@@ -202,7 +202,6 @@ ofertan = function(x,y, window = -36) sqlQuery(con2, paste0(
                     ,C.orgEnterprise [EntCode]
                     ,C.orgLegalName [Razon Social]
                     ,'Oferta en licitaciones (o convenio Marco)' as [Tipo de participacion]
-                    , A.bidEconomicIssueDate [Date]
               FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
               INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
               INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
@@ -217,7 +216,6 @@ ofertan = function(x,y, window = -36) sqlQuery(con2, paste0(
                     ,B.orgEnterprise [EntCode]
                     ,B.orgLegalName [Razon Social]
                     ,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
-                    , C.porSendDate [Date]
               FROM DCCPProcurement.dbo.prcPOCotizacion A
               INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
               INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
@@ -231,7 +229,6 @@ ofertan = function(x,y, window = -36) sqlQuery(con2, paste0(
               ,COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI [EntCode]
               ,B.orgLegalName [Razon Social]
               ,'Entrega cotización para Compra ágil' as [Tipo de participacion]
-              , SOLI.FechaCierre [Date]
               FROM DCCPCotizacion.dbo.SolicitudCotizacion as SOLI
               INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
               INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI =B.orgEnterprise
@@ -246,8 +243,8 @@ ofertan = function(x,y, window = -36) sqlQuery(con2, paste0(
                   , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
                   , @MONTH [Mes Central]
                   , @YEAR [Anio Central]
+                  , @startDate [Comienzo]
                   , @endDate [Final]
-                  , T.Date [Fecha de emisión oferta]
             	FROM TEMP T
             	LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
                 FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
@@ -261,8 +258,12 @@ ofertan = function(x,y, window = -36) sqlQuery(con2, paste0(
 
 
 start <- Sys.time()
-ofertan_ = lapply(((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
+ofertan_2023 = lapply(1:((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
   data.table::rbindlist()
+ofertan_2022 = lapply(1:12, function(x) ofertan(x, 2022)) %>%
+  data.table::rbindlist()
+ofert = rbind(ofertan_2022
+              ,ofertan_2023)
 end <- Sys.time()
 difftime(end, start, units="mins")
 
@@ -275,7 +276,7 @@ saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en al
 #
 
 
-adjudican = function(x,y,window = -36) sqlQuery(con2, paste0(
+adjudican = function(x,y,window = -12) sqlQuery(con2, paste0(
   "
       DECLARE @YEAR AS INT;
       DECLARE @MONTH AS INT;
@@ -298,7 +299,6 @@ adjudican = function(x,y,window = -36) sqlQuery(con2, paste0(
         , @YEAR [Anio Central]
         , @startDate [Comienzo]
         , @endDate [Final]
-        , A.porSendDate [Fecha de emisión orden de compra]
       
       FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
       INNER JOIN DCCPPlatform.dbo.gblOrganization O with(nolock) ON A.porSellerOrganization = O.orgCode
@@ -318,15 +318,19 @@ adjudican = function(x,y,window = -36) sqlQuery(con2, paste0(
 
 
 # start <- Sys.time()
-# adjudican_ = lapply(1:10, function(x) adjudican(x, 2023)) %>% 
+# adjudican_2023 = lapply(1:(month(today())-1), function(x) adjudican(x, year(today()))) %>%
 #    data.table::rbindlist()
+# adjudican_2022 = lapply(1:12, function(x) adjudican(x, 2022)) %>%
+#   data.table::rbindlist()
+# adjudican_ = rbind(adjudican_2022
+#                    ,adjudican_2023)
 # end <- Sys.time()
 # difftime(end, start, units="mins")
 
-# # 
+# #
 #saveRDS(adjudican_, file = paste0(gsub("-", "", today()),gsub(" ","_"," reciben una orden de compra 2023.rds")))
-# # 
-# 
+# #
+#
 
 
 #Detalles sobre los archivos guardados en el directorio de trabajo ======================
