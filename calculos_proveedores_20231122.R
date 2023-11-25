@@ -257,23 +257,18 @@ ofertan = function(x,y, window = -12) sqlQuery(con2, paste0(
 )
 
 
-start <- Sys.time()
-ofertan_2023 = lapply(1:((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
-  data.table::rbindlist()
-ofertan_2022 = lapply(1:12, function(x) ofertan(x, 2022)) %>%
-  data.table::rbindlist()
-ofert = rbind(ofertan_2022
-              ,ofertan_2023)
-end <- Sys.time()
-difftime(end, start, units="mins")
-
-#
-saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
-
-
-
+# start <- Sys.time()
+# ofertan_2023 = lapply(1:((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
+#   data.table::rbindlist()
+# ofertan_2022 = lapply(1:12, function(x) ofertan(x, 2022)) %>%
+#   data.table::rbindlist()
+# ofert = rbind(ofertan_2022
+#               ,ofertan_2023)
+# end <- Sys.time()
+# difftime(end, start, units="mins")
 # 
-#
+# #
+# saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
 
 
 adjudican = function(x,y,window = -12) sqlQuery(con2, paste0(
@@ -334,9 +329,11 @@ adjudican = function(x,y,window = -12) sqlQuery(con2, paste0(
 
 
 #Detalles sobre los archivos guardados en el directorio de trabajo ======================
-#
-#detalles = function(){
-  details = file.info(path = wd_path, list.files(pattern="*.rds"))
+
+detalles = function(path = wd_path, pattern = "*.rds"){
+  require(dplyr)
+  
+  details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
   
   details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
     filter(isdir==FALSE)
@@ -344,7 +341,11 @@ adjudican = function(x,y,window = -12) sqlQuery(con2, paste0(
   details$files = rownames(details)
   
   rownames(details) = NULL
-#}
+  
+  return(details)
+}
+
+details = detalles()
 
 #detalles()
 
@@ -359,41 +360,103 @@ ofertan_ = readr::read_rds(details$files[grep("ofertan", details$files)][1])
 adjudican_ = readr::read_rds(file = details$files[grep("reciben", details$files)][1])
 
 # CÁLCULO DEL ÍNDICE DE CARÁCTER TEMPORAL ======================================
+# 
 
-data_index = login_ %>% 
+comienzo = ofertan_ %>% 
+  group_by(Comienzo) %>% 
+  summarise(comienzos = n_distinct(Comienzo), 
+            `Mes Central` = `Mes Central`[1]
+            ,`Anio Central`=`Anio Central`[1]) %>% 
+  select(Comienzo, `Mes Central`, `Anio Central`)
+
+final = ofertan_ %>% 
+  group_by(Final) %>% 
+  summarise(finales = n_distinct(Final)) %>% 
+  select(Final)
+
+intervalo = comienzo %>% 
+  mutate(Final = as.Date(final$Final)) %>% data.frame()
+
+
+start <- Sys.time()
+
+inscritos_ = lapply(1:nrow(intervalo), function(x){
+  inscritos_ %>%
+    filter(data.table::between(as.Date(`Fecha de creación empresa`),
+                               min(as.Date(`Fecha de creación empresa`)),
+                               as.Date(intervalo[x,4]))) %>% 
+    mutate(Final=intervalo[x,4],
+           `Mes Central` = intervalo[x,2]
+           ,`Anio Central` = intervalo[x,3])
+}) %>% data.table::rbindlist()
+end <- Sys.time()
+
+difftime(end, start, units="mins")
+
+
+data_index = inscritos_ %>% 
   left_join(ofertan_, by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>%
   left_join(adjudican_ %>% 
               mutate(`Sello Mujer` = ifelse(`Sello Mujer`== 1, "Mujeres", "Hombres"))
             , by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>% 
   mutate(ofrece = ifelse(!is.na(`Rut Proveedor.y`), 1, 0), 
          gana = ifelse(!is.na(`Rut Proveedor`),1,0))
-  
+
+# Gráfico del Índice de Participación con Perspectiva de Género =========================  
 
 indice =  data_index %>% 
-    group_by(`Sello Mujer`, `Mes Central`) %>%
+    group_by(`Sello Mujer`, `Mes Central`, `Anio Central`) %>%
     summarise(participantes = n()
               ,oferentes = sum(ofrece)
               ,ganadores = sum(gana)) %>% 
+    mutate(fecha = as.Date(paste(`Anio Central`
+                               , `Mes Central`, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
     setDT() %>% 
     dcast(formula = ...~`Sello Mujer`, value.var = c("participantes", "oferentes", "ganadores")) %>% 
-    mutate(r_participa = (participantes_Mujeres/participantes_Hombres)*100
-           ,r_oferta = (oferentes_Mujeres/oferentes_Hombres)*100 
-           ,r_adjudica = (ganadores_Mujeres/ganadores_Hombres)*100, 
+    mutate(r_participa = (participantes_Mujeres/participantes_Hombres)
+           ,r_oferta = (oferentes_Mujeres/oferentes_Hombres) 
+           ,r_adjudica = (ganadores_Mujeres/ganadores_Hombres), 
            ) %>% 
     rowwise() %>% 
-    mutate(indicador = ((r_participa^(1/6))*(r_oferta^(2/6))*(r_adjudica^(3/6)))) %>% 
+    mutate(indicador = ((r_participa^(1/3))*(r_oferta^(1/3))*(r_adjudica^(1/3)))) %>% 
     ungroup() %>% 
-    mutate(indice = (indicador/median(indicador))*100,
+    arrange(`Mes Central`) %>% 
+    arrange(`Anio Central`) %>% 
+    mutate(indice = (indicador/indicador[1])*100,
            var_ind = ((indice-lag(indice))/lag(indice))*100
-           , indice_part = (r_participa/median(r_participa))*100
-           ,indice_oferta= (r_oferta/median(r_oferta))*100
-           ,indice_adjudica = (r_adjudica/median(r_adjudica))*100
+           , indice_part = (r_participa/r_participa[1])*100
+           ,indice_oferta= (r_oferta/r_oferta[1])*100
+           ,indice_adjudica = (r_adjudica/r_adjudica[1])*100
            ,var_part = ((indice_part-lag(indice_part))/lag(indice_part))*100
            ,var_ofert = ((indice_oferta-lag(indice_oferta))/lag(indice_oferta))*100
            ,var_adjudica = ((indice_adjudica-lag(indice_adjudica))/lag(indice_adjudica))*100
 )
 
-ts.plot(indice$indice)
+(
+  indice_plot = ggplot(indice, aes(x = fecha)) +
+    geom_line(aes(y = indice, color = "General"), size = 1) +
+    geom_line(aes(y = indice_part, color = "Participación"), size = 1) +
+    geom_line(aes(y = indice_oferta, color = "Oferta"), size = 1) +
+    geom_line(aes(y = indice_adjudica, color = "Adjudicación"), size = 1) +
+    labs(title = "Índice de Participación con Perspectiva de Género",
+         y = "Índice (Base: Enero 2022)",
+         x = "Fecha") +
+    theme_minimal()
+)
+
+(
+  indice_plot = ggplot(indice, aes(x = fecha)) +
+    geom_line(aes(y = indice, color = "General"), size = 1) +
+    geom_line(aes(y = indice_part, color = "Participación"), size = 1) +
+    geom_line(aes(y = indice_oferta, color = "Oferta"), size = 1) +
+    geom_line(aes(y = indice_adjudica, color = "Adjudicación"), size = 1) +
+    labs(title = "Índice de Participación con Perspectiva de Género",
+         y = "Índice (Base: Enero 2022)",
+         x = "Fecha", 
+         color = "Categoría") +
+    theme_minimal()
+)
+
 
 ofertan_inst = function(x,y) sqlQuery(con2, paste0(
   "
