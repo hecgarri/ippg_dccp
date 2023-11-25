@@ -183,6 +183,8 @@ login = function(x,y, window = -24) sqlQuery(con2, paste0(
 # 
 # 
 
+# OFERENTES DIFERENTES PROCEDIMIENTOS DE COMPRA ====================================
+
 ofertan = function(x,y, window = -12) sqlQuery(con2, paste0(
   "
               DECLARE @YEAR AS INT;
@@ -270,6 +272,8 @@ ofertan = function(x,y, window = -12) sqlQuery(con2, paste0(
 # #
 # saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
 
+
+# PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA 
 
 adjudican = function(x,y,window = -12) sqlQuery(con2, paste0(
   "
@@ -464,13 +468,16 @@ indice =  data_index %>%
 htmlwidgets::saveWidget(indice_plotly,
                         file = paste0(gsub("datos", "ippg_dccp", wd_path),"/indice_interactivo.html"))
 
+
+# OFERENTES DE CADA INSTITUCIÓN DEL ESTADO  ===============================================
+
 ofertan_inst = function(x,y) sqlQuery(con2, paste0(
   "
-              DECLARE @YEAR AS INT;
+                            DECLARE @YEAR AS INT;
               DECLARE @MONTH AS INT;
                 
-              SET @YEAR = ",y,";
-              SET @MONTH = ",x,";
+              SET @YEAR = 2023;
+              SET @MONTH = 10;
                 
               DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
               DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
@@ -478,12 +485,13 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
               
               WITH TEMP as(
           
-              SELECT DISTINCT
+			  SELECT DISTINCT
               UPPER(C.orgTaxID) collate Modern_Spanish_CI_AI [Rut Proveedor] 
               ,C.orgEnterprise collate Modern_Spanish_CI_AI [EntCode]
               ,E.entname [Organismo]
               ,B.rbhOrganization collate Modern_Spanish_CI_AI [CodigoOrganismo]
-              ,'Oferta en licitaciones (o convenio Marco)' collate Modern_Spanish_CI_AI [Tipo de participacion] 
+              --,'Oferta en licitaciones (o convenio Marco)' collate Modern_Spanish_CI_AI [Tipo de participacion] 
+              , COUNT(DISTINCT A.bidRFBCode) [Cantidad ofertas]
               FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
               INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
               INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
@@ -492,10 +500,13 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
               WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
               (A.bidEconomicIssueDate < @endDate) AND
               (A.bidEconomicIssueDate >= @startDate)
+              GROUP BY 
+			        C.orgTaxID
+              , C.orgEnterprise
+              , E.entname
+              , B.rbhOrganization
               
-              UNION
-              
-              
+              UNION 
               
               SELECT DISTINCT 
               UPPER(A.proveedorRut) [Rut Proveedor]
@@ -503,7 +514,8 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
               ,E.entname [Organismo]
               --,B.orgLegalName [Razon Social]
               ,B.orgCode [CodigoOrganismo]
-              ,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
+              --,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
+              , COUNT(DISTINCT C.porID) [Cantidad ofertas]
               FROM DCCPProcurement.dbo.prcPOCotizacion A
               INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
               INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
@@ -511,6 +523,11 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
               INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
               WHERE (C.porSendDate < @endDate) AND
               (C.porSendDate >= @startDate)
+              GROUP BY 
+              A.proveedorRut
+              ,B.orgEnterprise
+			        , E.entname
+              ,B.orgCode
 
               UNION
               
@@ -519,7 +536,8 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
               ,COTI.CodigoEmpresa collate Modern_Spanish_CI_AI [EntCode]
               ,E.entname [Organismo]
               ,SOLI.CodigoOrganismo [CodigoOrganismo]
-              ,'Entrega cotización para Compra ágil' [Tipo de participacion]
+              --,'Entrega cotización para Compra ágil' [Tipo de participacion]
+              ,COUNT(DISTINCT SOLI.Id) [Cantidad ofertas]
               FROM DCCPCotizacion.dbo.SolicitudCotizacion  SOLI
               INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
               INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_CI_AI =B.orgEnterprise collate Modern_Spanish_CI_AI
@@ -528,6 +546,11 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
               /* Unir e.entCode con gblEnterprise como O de organismo unirlo on T.entCode*/
               /* O.entname de la institución*/
               WHERE SOLI.FechaCierre <= @endDate AND EstadoId = 2 
+            	GROUP BY
+            	B.orgTaxID
+				      ,COTI.CodigoEmpresa
+            	,E.entname
+            	,SOLI.CodigoOrganismo
             	)
             	
             	SELECT DISTINCT
@@ -536,6 +559,7 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
                   ,T.EntCode
                   --,T.[Razon Social]
                   , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+                  ,T.[Cantidad ofertas]
                   , @MONTH [Mes Central]
                   , @YEAR [Anio Central]
                   , @startDate [Comienzo]
@@ -547,21 +571,21 @@ ofertan_inst = function(x,y) sqlQuery(con2, paste0(
                 (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
                 (year(s.fechacreacion)<= @YEAR)
                 ) s on T.EntCode=s.EntCode
-			       -- INNER JOIN [DCCPPlatform].[dbo].[gblEnterprise] O ON  T.CodigoOrganismo = O.entCode
                      "
 )
 )
 
 # start <- Sys.time()
-# ofertan_inst_ = lapply(10, function(x) ofertan_inst(x,2023)) %>% 
+# ofertan_inst_ = lapply(10, function(x) ofertan_inst(x,2023)) %>%
 #   data.table::rbindlist()
 # end <- Sys.time()
-# ofertan_inst_t = difftime(end, start, units="mins")
-# 
+# difftime(end, start, units="mins")
+
 # # # 
 # saveRDS(ofertan_inst_, file = paste0(gsub("-", "", today()),gsub(" ","_"," institución recibe una oferta de compra 2023.rds")))
 # # # 
 
+# PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA DE CADA INSTITUCIÓN DEL ESTADO ===========================
 
 adjudican_inst = function(x,y) sqlQuery(con2, paste0(
   "
@@ -579,10 +603,12 @@ adjudican_inst = function(x,y) sqlQuery(con2, paste0(
         
         SELECT DISTINCT 
         UPPER(E.entName) [Organismo]  
-        --,[Rut Proveedor]
-        , O.orgEnterprise [EntCode]
+        , O.orgTaxID [Rut Proveedor]
+        , O.orgEnterprise [EntCode] -- Código Empresa
+        , D.orgEnterprise [OrgCode] -- Código Institución 
         , C.entName [Razon Social]
         ,(CASE S.TipoSello WHEN 3 THEN 1 ELSE 0 END) [Sello Mujer]
+        , COUNT(DISTINCT A.porID) [Cantidad OC]
         , @MONTH [Mes Central]
         , @YEAR [Anio Central]
         , @startDate [Comienzo]
@@ -602,23 +628,33 @@ adjudican_inst = function(x,y) sqlQuery(con2, paste0(
       WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
         (A.porSendDate < @endDate) AND
       (A.porSendDate >= @startDate)
+      GROUP BY 
+      E.entName
+      ,O.orgTaxID
+  	  ,O.orgEnterprise
+      ,D.orgEnterprise
+      ,C.entName
+      ,S.TipoSello
 
 ")
 )
 
 
 # start <- Sys.time()
-# adjudican_inst_ = lapply(10, function(x) adjudican_inst(x, 2023)) %>% 
+# adjudican_inst_ = lapply(10, function(x) adjudican_inst(x, 2023)) %>%
 #     data.table::rbindlist()
 # end <- Sys.time()
 # adjudican_inst_t = difftime(end, start, units="mins")
 # 
-# # # 
-# saveRDS(adjudican_inst_, file = paste0(gsub("-", "", today()),gsub(" ","_"," institución recibe una orden de compra 2023.rds")))
-# # # 
-# # 
+# # #
+# saveRDS(adjudican_inst_, file = paste0(gsub("-", "", today()),gsub(" ","_"," institución emite una orden de compra 2023.rds")))
+# # #
+# #
 
-#detalles()
+# CÁLCULO DEL ÍNDICE POR INSTITUCIONES =========================================
+
+
+details = detalles()
 #
 #
 
@@ -634,25 +670,26 @@ ofertan_instituciones = readr::read_rds(file = "20231124_institución_recibe_una
 adjudican_instituciones = readr::read_rds(file = "20231124_institución_recibe_una_orden_de_compra_2023.rds")
 
 
-
 (
-  of_inst = ofertan_instituciones %>% 
+  of_inst = ofertan_inst_ %>% 
     group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
-    summarise(n = n()) %>% 
+    summarise(n = n(), 
+              n_of = sum(`Cantidad ofertas`)) %>% 
     setDT() %>% 
-    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = "n")  %>% 
-    mutate(r_ofer = (Mujeres/Hombres))
+    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n","n_of"))  %>% 
+    mutate(r_ofer = (n_Mujeres/n_Hombres))
 )
 
 
 (
-  adj_inst = adjudican_instituciones %>% 
+  adj_inst = adjudican_inst_ %>% 
     group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
     mutate(`Sello Mujer`=ifelse(`Sello Mujer`==1, "Mujeres", "Hombres")) %>% 
-    summarise(n = n()) %>% 
+    summarise(n = n(),
+              n_oc = sum(`Cantidad OC`)) %>% 
     setDT() %>% 
-    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = "n")  %>% 
-    mutate(r_adj = (Mujeres/Hombres))
+    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n", "n_oc"))  %>% 
+    mutate(r_adj = (n_Mujeres/n_Hombres))
 )
 
 
