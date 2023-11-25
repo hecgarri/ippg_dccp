@@ -457,6 +457,12 @@ indice =  data_index %>%
     theme_minimal()
 )
 
+(
+  indice_plotly = ggplotly(indice_plot)
+)
+
+htmlwidgets::saveWidget(indice_plotly,
+                        file = paste0(gsub("datos", "ippg_dccp", wd_path),"/indice_interactivo.html"))
 
 ofertan_inst = function(x,y) sqlQuery(con2, paste0(
   "
