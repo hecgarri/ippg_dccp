@@ -696,4 +696,81 @@ adjudican_instituciones = readr::read_rds(file = "20231124_institución_recibe_u
 data_index_inst = 
   of_inst %>% 
   left_join(adj_inst, by = c("Organismo")) %>% 
-  mutate(indicador = sqrt(r_ofer*r_adj))
+  mutate(indicador = sqrt(r_ofer*r_adj),
+         total_n = n_oc_Mujeres+n_oc_Hombres,
+         total_oc = n_of_Mujeres+n_of_Mujeres) %>% 
+  filter(!is.na(indicador))
+
+
+# ANÁLISIS Y VISUALIZACIÓN DE LOS DATOS ==========================================
+
+quitar_outliers <- function(data, variable, coeficiente = 1.5) {
+  variable <- enquo(variable)  # Convertir el nombre de la variable en una expresión quosure
+  
+  q1 <- quantile(data %>% pull(!!variable), 0.25)
+  q3 <- quantile(data %>% pull(!!variable), 0.75)
+  iqr <- q3 - q1
+  
+  limite_inferior <- q1 - coeficiente * iqr
+  limite_superior <- q3 + coeficiente * iqr
+  
+  data_filtrados <- data %>% filter((!!variable) >= limite_inferior, (!!variable) <= limite_superior)
+  return(data_filtrados)
+}
+
+# Llamada a la función con la variable indicador
+datos_ind_fil <- quitar_outliers(data_index_inst, indicador)
+
+# Proposición: no hay relación entre el número de OC y el índice ======
+# Este gráfico queda para nuestro propio análisis
+
+(
+  ind_inst_plot = ggplot(datos_ind_fil, aes(x = total_oc, y = indicador, size = total_n)) +
+    geom_point() +
+    geom_vline(xintercept = mean(datos_ind_fil$total_oc), linetype = "dashed", color = "blue", size = 1) +
+    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
+    labs(title = "IPPG vs Cantidad de OC's",
+         x = "Empresas ",
+         y = "IPPG",
+         size = "Tercera Variable") +
+    theme_minimal()
+)
+
+cor.test(datos_ind_fil$total_oc , datos_ind_fil$indicador)
+
+cor.test(datos_ind_fil$total_n,datos_ind_fil$indicador)
+
+ggplotly(ind_inst_plot)
+
+# Proposición: Excluidos los Outliers los datos se comportan según una normal
+# 
+
+(
+  ind_hist = ggplot(datos_ind_fil %>% 
+                      arrange(indicador), aes(indicador, , y = ..density..)) +
+    geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
+    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
+    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
+    labs(title = "Histograma del IPPG",
+         x = "IPPG",
+         y = "Frecuencia")+
+    theme_minimal()
+  
+)
+
+ggplotly(ind_hist)
+
+
+(
+  grafico_barras <- plot_ly(data = datos_ind_fil, x = ~datos_ind_fil$Organismo, y = ~datos_ind_fil$indicador, type = "bar", marker = list(color = "blue"))  
+  
+  layout_grafico <- layout(title = "Gráfico de Barras Vertical Ordenado Ascendentemente",
+                           xaxis = list(title = "Categorías"),
+                           yaxis = list(title = "Valores"),
+                           barmode = "group")
+  
+  # Combina el gráfico y el diseño
+  grafico_final <- grafico_barras %>% layout(layout_grafico)
+  
+)
+
