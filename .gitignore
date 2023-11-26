@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+# Ignorar archivos con extensión .log
+*.rds
