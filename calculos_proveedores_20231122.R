@@ -721,6 +721,12 @@ quitar_outliers <- function(data, variable, coeficiente = 1.5) {
 # Llamada a la función con la variable indicador
 datos_ind_fil <- quitar_outliers(data_index_inst, indicador)
 
+
+
+saveRDS(datos_ind_fil,
+file = paste0(gsub("-", "", today()),
+              gsub(" ","_"," datos índice desagregado por instituciones.rds")))
+
 # Proposición: no hay relación entre el número de OC y el índice ======
 # Este gráfico queda para nuestro propio análisis
 

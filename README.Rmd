@@ -1,0 +1,94 @@
+---
+title: "Índice de Participación con Perspectiva de Género"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+wd_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos"
+
+setwd(wd_path)
+
+load_pkg <- function(pack){
+  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
+  if (length(create.pkg))
+    install.packages(create.pkg, dependencies = TRUE)
+  sapply(pack, require, character.only = TRUE)
+}
+
+packages = c("tidyverse" #Conjunto integral de paquetes para manipular y analizar datos de manera coherente y eficiente.
+             , "RODBC" #facilita la conexión y manipulación de bases de datos a través de ODBC (Open Database Connectivity).
+             , "plotly" #proporciona herramientas interactivas para la creación de gráficos dinámicos y visualizaciones interactivas
+             , "data.table" #Paquete optimizado para manipulación eficiente de grandes conjuntos de datos, destacando por su velocidad y funcionalidades avanzadas.
+             , "formattable"
+             , "hutils"
+             , "readr"
+             , "VennDiagram"
+             , "RColorBrewer")
+
+load_pkg(packages)
+
+detalles = function(path = wd_path, pattern = "*.rds"){
+  require(dplyr)
+  
+  details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
+  
+  details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
+    filter(isdir==FALSE)
+  
+  details$files = rownames(details)
+  
+  rownames(details) = NULL
+  
+  return(details)
+}
+
+details = detalles()
+
+
+datos_ind_fil = read_rds(file =details$files[grep("_desagregado", details$files)][1] )
+
+```
+
+## GitHub Documents
+
+This is an R Markdown format used for publishing markdown documents to GitHub. When you click the **Knit** button all R code chunks are run and a markdown file (.md) suitable for publishing to GitHub is generated.
+
+## Including Code
+
+You can include R code in the document as follows:
+
+```{r cars, echo=FALSE, warning=FALSE}
+
+(
+  ind_inst_plot = ggplot(datos_ind_fil, aes(x = total_oc, y = indicador, size = total_n)) +
+    geom_point() +
+    geom_vline(xintercept = mean(datos_ind_fil$total_oc), linetype = "dashed", color = "blue", size = 1) +
+    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
+    labs(title = "IPPG vs Cantidad de OC's",
+         x = "Empresas ",
+         y = "IPPG",
+         size = "Tercera Variable") +
+    theme_minimal()
+)
+  
+
+# (
+# ind_inst_plotly = ggplotly(ind_inst_plot)  
+# )
+
+
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
