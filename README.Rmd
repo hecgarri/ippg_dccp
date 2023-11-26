@@ -50,17 +50,17 @@ detalles = function(path = wd_path, pattern = "*.rds"){
   return(details)
 }
 
-<<<<<<< HEAD
+
 details = detalles(wd_path, pattern = "*.rds")
 
 
 datos_ind_fil = read_rds(file = details$files[grep("_desagregado", details$files)][1] )
-=======
+
 details = detalles()
 
 
 datos_ind_fil = read_rds(file =details$files[grep("_desagregado", details$files)][1] )
->>>>>>> 0d7a8a6b688c9ec08dbf0ec30919b19f4526ade0
+
 
 ```
 
@@ -111,7 +111,7 @@ You can also embed plots, for example:
     geom_vline(xintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
     labs(title = "Histograma del IPPG",
          x = "IPPG",
-         y = "Frecuencia")+
+         y = "Densidad")+
     theme_minimal()
   
 )
