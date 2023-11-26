@@ -6,15 +6,15 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-<<<<<<< HEAD
+
 wd_path = getwd()
 
 #setwd(wd_path)
-=======
+
 wd_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos"
 
 setwd(wd_path)
->>>>>>> 0d7a8a6b688c9ec08dbf0ec30919b19f4526ade0
+
 
 load_pkg <- function(pack){
   create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
