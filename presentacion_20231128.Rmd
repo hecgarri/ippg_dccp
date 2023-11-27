@@ -1,0 +1,385 @@
+---
+title: "Índice de Participación con Perspectiva de Género"
+output:
+  beamer_presentation: default
+  slidy_presentation: default
+date: "2023-10-31"
+theme: Boadilla
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      message = FALSE, warning = FALSE,
+                      # This should allow Rmarkdown to locate the data
+    root.dir = rprojroot::find_rstudio_root_file("C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/ippg_dccp/")
+    ) 
+options(tinytex.verbose = TRUE)
+```
+
+```{r segundo,include=FALSE}
+
+#Carga de paquetes necesarios para el análisis
+load_pkg <- function(pack){
+  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
+  if (length(create.pkg))
+  install.packages(create.pkg, dependencies = TRUE)
+  sapply(pack, require, character.only = TRUE)
+}
+
+packages = c("tidyverse"
+             , "RODBC"
+             , "plotly"
+             ,"data.table"
+             , "kableExtra"
+             ,"formattable", 
+             "readr")
+
+load_pkg(packages)
+```
+
+
+## Antecedentes
+
+- La Dirección de Compras y Contratación Pública (ChileCompra) actualizó recientemente su directiva N°20 en la que incorpora perspectiva de género en las compras públicas. 
+- A raíz de lo anterior, desde el ministerio de Hacienda se solicita medir el fenómeno para obtener un adecuado diagnóstico que permita en el futuro diseñar medidas que promuevan la participación de las mujeres en el sistema
+
+- En virtud de lo anterior, a continuación se presentarán algunos resultados preliminares, continuando con la propuesta metodológica de desarrollo de un Índice de Participación con Perspectiva de Género (IPPG) en Mercado Público, presentada el día 24 de agosto de 2023 
+
+## Propuesta
+
+- El índice propuesto, siguiendo de cerca el trabajo de Permanyer (2010) es el siguiente: 
+
+$$
+IPPG_{t}^{i} = \sqrt[n_{j}]{\prod_{j=1}^{n_{j}}R_{j,t}^{i}}
+$$
+
+Donde: 
+  $$
+ R_{j,t}^{i} = \frac{P_{M,j,t}^{i}}{P_{H,j,t}^{i}} 
+  $$
+  
+En que $i=1,...,M$ corresponde a las instituciones del Estado; $j = 1,..,n_{j}$, corresponde a las dimensiones a considerar; $t=1,..,T$ identifica la dimensión tiempo, por último, el subíndice $M$ a las empresas lideradas por mujeres y $H$, aquellas lideradas por hombres  
+
+## Propuesta
+
+En este caso, $R_{j,t}^{i}$ es un odds ratio para cada una de las etapas del proceso de participación, representando por tanto la  razón entre las probabilidades tanto de hombres como mujeres en las diferentes etapas del proceso, es decir, las chance de:  
+
+- Participar en Mercado Público: Es la razón de empresas lideradas por mujeres activas en la plataforma respecto de aquellas lideradas por hombres.
+- Ofertar en una Licitación/Compra Ágil: Considera la proporción de ofertas presentadas por empresas lideradas por mujeres (hombres) 
+- Adjudicar una licitación: Considera la proporción de licitaciones adjudicadas por empresas lideradas por mujeres (hombres)
+
+Toda la información fue obtenida de los servidores de ChileCompra
+
+<!-- ## Consultas -->
+
+
+<!-- Oferta en licitaciones (*q_11*): -->
+
+<!-- Tablas involucradas:  -->
+
+<!-- \footnotesize -->
+
+<!-- \begin{itemize} -->
+<!-- \item \texttt{DM\_Procesos.dbo.THOportunidadesNegocio (Alias: Oneg)} : Contiene información sobre las oportunidades de negocio. -->
+<!-- \item \texttt{DM\_Procesos.dbo.DimComprador (Alias: C)}: Almacena datos sobre los compradores y las entidades de compra. -->
+<!-- \item \texttt{DM\_Transaccional.dbo.DimInstitucion (Alias: I)}: Contiene información sobre las instituciones relacionadas con las oportunidades de negocio. -->
+<!-- \item \texttt{DM\_Procesos.dbo.THOfertas (Alias: O)}: Almacena detalles sobre las ofertas relacionadas con las oportunidades de negocio. -->
+<!-- \item \texttt{DM\_Transaccional.dbo.DimProveedor (Alias: P)}: Contiene información sobre los proveedores relacionados con las ofertas. -->
+<!-- \end{itemize} -->
+
+<!-- ## Consultas -->
+
+
+<!-- Oferta en licitaciones (*q_11*): -->
+
+<!-- Criterios de filtro y unión:   -->
+<!-- \footnotesize  -->
+
+<!-- \begin{itemize} -->
+<!-- \item  \texttt{Uniones (Joins)}: Se utilizan uniones para relacionar las tablas mencionadas anteriormente utilizando identificadores comunes, como \texttt{rbhCode} y \texttt{entCode}. -->
+<!-- \item \texttt{Filtro por Año de Publicación}: La consulta filtra las oportunidades de negocio para incluir solo aquellas publicadas después de 2022 (\texttt{year(oneg.FechaPublicacion) >= 2022}). -->
+<!-- \item \texttt{Filtro por Estado de Oferta}: Se seleccionan ofertas con estados específicos (3, 4 o 5) (\texttt{O.IdEstadoOferta in (3,4,5)}). -->
+<!-- \item \texttt{Filtro por Estado de la Oportunidad de Negocio}: Se seleccionan oportunidades de negocio con estados específicos (mayor o igual a 6) (\texttt{Oneg.IDEstadoON >= 6}). -->
+<!-- \item \texttt{Filtro por Tipo de Sello de Mujer}: Se aplica un filtro complejo relacionado con el tipo de sello de mujer, involucrando la tabla \texttt{[DCCPMantenedor].[MSello].[SelloProveedor]} y varios criterios de fecha y tipo de persona. -->
+<!-- \end{itemize} -->
+
+<!-- ## Consultas -->
+
+<!-- Participa en la plataforma (\texttt{q\_12}):  -->
+
+<!-- Tablas Involucradas: -->
+
+<!-- \footnotesize -->
+
+<!-- \begin{itemize} -->
+<!-- \item \texttt{DCCPProcurement.dbo.prcPOHeader}: Almacena información sobre las cabeceras de las órdenes de compra. -->
+<!-- \item \texttt{DCCPPlatform.dbo.gblOrganization}: Contiene datos de organizaciones y empresas. -->
+<!-- \item \texttt{DCCPPlatform.dbo.gblEnterprise}: Almacena información sobre las empresas. -->
+<!-- \item \texttt{DCCPProcurement.dbo.prcBIDQuote}: Guarda detalles sobre las ofertas presentadas en licitaciones. -->
+<!-- \item \texttt{DCCPProcurement.dbo.prcRFBHeader}: Contiene datos sobre las cabeceras de las solicitudes de licitación. -->
+<!-- \item \texttt{DCCPProcurement.dbo.prcPOCotizacion}: Almacena información sobre las cotizaciones asociadas a órdenes de compra. -->
+<!-- \item \texttt{DCCPCotizacion.dbo.SolicitudCotizacion}: Contiene datos sobre las solicitudes de cotización. -->
+<!-- \item \texttt{DCCPCotizacion.dbo.Cotizacion}: Guarda detalles sobre las cotizaciones realizadas. -->
+<!-- \end{itemize} -->
+
+<!-- ## Consultas -->
+
+<!-- Participa en la plataforma (\texttt{q\_12}):  -->
+
+<!-- Criterios de filtro y unión: -->
+
+<!-- \footnotesize -->
+
+<!-- \begin{itemize} -->
+<!-- \item Primera Parte (Órdenes de Compra): Selecciona las entCode (códigos de entidades) de las organizaciones relacionadas con las órdenes de compra que tienen estados específicos y que han sido enviadas entre las fechas \texttt{@FechaIni} y \texttt{@FechaFin}, correspondientes al 01 de enero y 31 de diciembre de 2022 para este primer ejercicio -->
+<!-- \item Segunda Parte (Ofertas en Licitaciones): Obtiene las entCode de las organizaciones que han presentado ofertas en licitaciones (\texttt{bidDocumentStatus} en estados específicos) entre las fechas \texttt{@FechaIni} y \texttt{@FechaFin} -->
+<!-- \item Tercera Parte (Cotizaciones Asociadas a Órdenes de Compra): Recupera las entCode de las organizaciones que han enviado cotizaciones asociadas a órdenes de compra, donde las órdenes de compra están dentro del rango de fechas especificado. -->
+<!-- \item Cuarta Parte (Cotizaciones de Solicitudes): Selecciona los códigos de empresas (\texttt{CodigoEmpresa}) de las cotizaciones que están asociadas a solicitudes de cotización con un año específico y estado específico. -->
+<!-- \end{itemize} -->
+
+
+<!-- ## Consultas -->
+
+<!-- Sello Mujer (\texttt{q\_13}) -->
+
+<!-- Tablas involucradas:  -->
+<!-- \footnotesize -->
+
+<!-- \begin{itemize} -->
+<!-- \item \texttt{[DCCPMantenedor].[MSello].[SelloProveedor]}: Esta tabla contiene datos relacionados con el Sello Mujer. Los campos relevantes son entcode (código de entidad), TipoSello (tipo de sello), FechaCaducidad (fecha de caducidad del sello) y fechacreacion (fecha de creación del sello). -->
+<!-- \end{itemize} -->
+
+<!-- Criterios de Filtro y Unión: -->
+
+<!-- \begin{itemize} -->
+<!-- \item \texttt{Filtro por Tipo de Sello y Persona}: La consulta filtra las filas donde el TipoSello es 3 (indicando un sello específico) y persona es 1 (indicando persona natural) o donde persona es 2 (indicando persona jurídica) y la fecha de caducidad (FechaCaducidad) es mayor o igual al año especificado en la variable \texttt{@ANIO} y la fecha de creación (fechacreacion) es menor o igual al mismo año. -->
+<!-- \end{itemize} -->
+
+
+## Resultados preliminares: Monto proveedoras
+
+```{r primer,warning=FALSE}
+q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds") %>% 
+  mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`),  "Hombres","Mujeres"), 
+         `Monto anual USD` = currency(`Monto anual USD`,symbol = "$", digits=2,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` = currency(`Cantidad OC`,symbol = "", digits=0,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."))
+  
+
+kableExtra::kable(
+  q_1,
+  col.names = c("Año", "Sello Mujer", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"),
+  digits = 2,
+  caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  kableExtra::footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+## Tasa de Participación monto proveedoras
+
+```{r, warning=FALSE}
+q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds") %>%
+  group_by(`Año`) %>%
+  mutate(`Total USD` = sum(`Monto anual USD`),
+         `Total OC` = sum(`Cantidad OC`)) %>% 
+  mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`),  "Hombres","Mujeres"), 
+         `Monto anual USD` = 
+           formattable::comma((`Monto anual USD`/`Total USD`)*100, decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` =   formattable::comma((`Cantidad OC`/`Total OC`)*100, decimal.mark = ",", big.mark = ".")) %>% 
+  select(-`Total USD`, -`Total OC`)
+  
+
+kable(
+  q_1,
+  col.names = c("Año", "Sello Mujer", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"),
+  digits = 2,
+  caption = "porcentaje del Monto total (MM USD) y porcentaje Órdenes de Compra por sexo de quien lidera la empresa, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+
+## Monto y cantidad de órdenes de compra según procedimiento de compra 
+
+```{r, eval=TRUE}
+q_3 = readr::read_rds(file = "q3_monto_cantidad_oc_segun_tipo_OC.rds") %>% 
+  mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`),  "Hombres","Mujeres"), 
+         `Monto anual USD` = currency(`Monto anual USD`,symbol = "$", digits=2,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` = currency(`Cantidad OC`,symbol = "", digits=0,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."))
+  
+
+kable(
+  q_3,
+  col.names = c("Año", "Sello Mujer", "Tipo de Orden de Compra", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"),
+  digits = 2,
+  caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa y tipo de Orden de Compra, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+
+
+
+## Monto y cantidad de órdenes de compra según procedimiento de compra 
+
+```{r,warning=FALSE, eval=TRUE}
+q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds") %>% 
+  mutate(Sello = ifelse(is.na(Sello),  "Hombres","Mujeres"), 
+         `Monto anual USD` = 
+           formattable::comma((`Monto anual USD`), decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` =   formattable::comma(`Cantidad OC`, decimal.mark = ",", big.mark = ".")) %>% 
+  setDT() %>% 
+  data.table::dcast(formula = NombreInstitucion ~ Sello,
+                    value.var = c("Monto anual USD", "Cantidad OC")) %>% 
+  arrange(desc(`Monto anual USD_Mujeres`))
+  
+
+kable(
+  q_2[1:15,],
+  col.names = c("Institución", "Monto Anual Hombres", "Monto Anual Mujeres", "Órdenes de Compra Hombres", "Órdenes de Compra Mujeres"),
+  digits = 2,
+  caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa y tipo de Orden de Compra, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+## Cantidad y Tasa de Participación de proveedoras en el sistema
+
+```{r, eval=TRUE}
+q_4 = readr::read_rds(file = "sello_proveedores.rds") %>% 
+  mutate(Sello = formattable::comma(Sello, decimal.mark = ",", big.mark = "."), 
+         prop = formattable::comma(prop, decimal.mark = ",", big.mark = ".")) 
+  
+kable(
+  q_4,
+  col.names = c("Sello Mujer", "Cantidad proveedores", "Proporción del total"),
+  digits = 2,
+  caption = "Empresas con Sello mujer 2022"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+
+```
+
+
+
+## Resultados preliminares
+
+```{r, include=TRUE, eval=TRUE}
+
+general = readr::read_rds(file = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/indice_agregado.rds")
+
+```
+
+En términos generales, el resultado del indcador propuesto es `r round(general[1,"indicador"],2)`. Lo que indica que en términos generales, las empresas lideradas por mujeres están claramente desaventajadas en relación a las empresas lideradas por hombres, aunque al realizar un zoom por institución nos encontraremos con un panorama mucho más heterogéneo.
+
+
+Sin embargo, es necesario notar que la versión agregada considera las tres dimensiones señaladas previamente, a diferencia del índice por instituciones que considera sólo dos (pues el ratio de participación es idéntico para todos).
+
+## Resultados preliminares: Ranking de instituciones
+
+De un total de 961 entidades gubernamentales que operan a través del sistema, se procedió a rankear a cada una de acuerdo al resultado del índice. 
+
+A continuación se presenta un cuadro que resume los resultados de las 15 instituciones del Estado con mayor índice.
+
+```{r, echo=TRUE, include=FALSE}
+data = readr::read_rds(file = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/indice_por_institucion.rds")
+
+data = data %>%
+  select(`Institución Licitante`, r_adj, r_ofer, indicador) %>%
+  arrange(desc(indicador))
+
+kable(
+  data[1:15,],
+  col.names = c("Institución", "ratio adjudicación", "ratio ofertas", "indicador"),
+  digits = 2
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+```
+
+
+## Resultados preliminares: Ranking de instituciones
+
+Desde otro punto de vista, las instituciones con menor participación de empresas lideradas por mujeres de acuerdo a nuestro índice son las siguientes: 
+
+```{r, include=TRUE}
+
+data = data %>%
+  arrange(indicador)
+
+kable(
+  data[1:10,],
+  col.names = c("Institución", "ratio adjudicación", "ratio ofertas", "indicador"),
+  digits = 2
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+```
+
+
+## Resultados preliminares: Ranking de instituciones
+
+De lo anterior se desprende que son muy pocas instituciones que favorecen a las mujeres en desmedro de los hombres (sólo 11), lo que se refleja en la distribución del índice por institución que se muestra a continuación 
+
+```{r, include=FALSE}
+p_1 = ggplot(data, aes(x = indicador)) +
+  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black") +
+  geom_vline(aes(xintercept = median(indicador)), color = "red", linetype = "dashed", size = 10) +
+  labs(title = "Distribución IPPG",
+       x = "IPPG",
+       y = "Frecuencia") +
+  theme_minimal()
+```
+
+```{r, message=FALSE, warning=FALSE}
+p_1
+```
+
+## Pasos a seguir
+
+\footnotesize
+
+Más allá de los resultados preliminares aquí expuestos, quedan varios pasos a seguir, de enre los cuales se puede considerar: 
+
+- Considerar otros posibles universos en la construcción del índice: en esta propuesta se utilizaron las empresas participantes de la plataforma durante el año 2022, pero existen otros criterios que potencialmente pueden variar los resultados aquí presentados y que por tanto deben ser considerados para un ejercicio de análisis de sensibilidad. 
+- Es necesario definir si para el índice desagregado consideraremos sólo dos dimensiones o incluiremos la tercera a pesar de no variar. 
+- Queda pendiente analizar la evolución de otros indicadores propuestos en la minuta técnica de propuesta metodológica
+- Calcular los índices complementarios propuestos por Permanyer (2010) con la finalidad de identificar con mayor precisión las manginitudes de las brechas y la severidad de las mismas. 
+
+

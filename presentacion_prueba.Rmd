@@ -1,0 +1,371 @@
+---
+title: "Índice de Participación con Perspectiva de Género"
+output: slidy_presentation
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      message = FALSE, warning = FALSE
+    ) 
+options(tinytex.verbose = TRUE)
+```
+
+
+```{r, include=FALSE}
+#Carga de paquetes necesarios para el análisis
+load_pkg <- function(pack){
+  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
+  if (length(create.pkg))
+  install.packages(create.pkg, dependencies = TRUE)
+  sapply(pack, require, character.only = TRUE)
+}
+
+packages = c("tidyverse"
+             , "RODBC"
+             , "plotly"
+             ,"data.table"
+             , "kableExtra"
+             ,"formattable" 
+             ,"readr"
+             ,"here")
+
+load_pkg(packages)
+
+detalles = function(path = wd_path, pattern = "*.rds"){
+  require(dplyr)
+  
+  details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
+  
+  details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
+    filter(isdir==FALSE)
+  
+  details$files = rownames(details)
+  
+  rownames(details) = NULL
+  
+  return(details)
+}
+
+wd_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos/"
+
+details = detalles(wd_path, pattern = "*.rds")
+
+
+datos_ind_fil = read_rds(file = details$files[grep("_desagregado", details$files)][1] )
+
+details = detalles()
+
+
+datos_ind_fil = read_rds(file =details$files[grep("_desagregado", details$files)][1] )
+
+
+```
+
+## Antecedentes
+
+- La Dirección de Compras y Contratación Pública (ChileCompra) actualizó recientemente su directiva N°20 en la que incorpora perspectiva de género en las compras públicas. 
+- A raíz de lo anterior, desde el ministerio de Hacienda se solicita medir el fenómeno para obtener un adecuado diagnóstico que permita en el futuro diseñar medidas que promuevan la participación de las mujeres en el sistema
+
+- En virtud de lo anterior, a continuación se presentarán algunos resultados preliminares, continuando con la propuesta metodológica de desarrollo de un Índice de Participación con Perspectiva de Género (IPPG) en Mercado Público, presentada el día 24 de agosto de 2023 
+
+## Propuesta
+
+- El índice propuesto, siguiendo de cerca el trabajo de Permanyer (2010) es el siguiente: 
+
+$$
+IPPG_{t}^{i} = \sqrt[n_{j}]{\prod_{j=1}^{n_{j}}R_{j,t}^{i}}
+$$
+
+Donde: 
+  $$
+ R_{j,t}^{i} = \frac{P_{M,j,t}^{i}}{P_{H,j,t}^{i}} 
+  $$
+  
+En que $i=1,...,M$ corresponde a las instituciones del Estado; $j = 1,..,n_{j}$, corresponde a las dimensiones a considerar; $t=1,..,T$ identifica la dimensión tiempo, por último, el subíndice $M$ a las empresas lideradas por mujeres y $H$, aquellas lideradas por hombres  
+
+## Propuesta
+
+En este caso, $R_{j,t}^{i}$ es un odds ratio para cada una de las etapas del proceso de participación, representando por tanto la  razón entre las probabilidades tanto de hombres como mujeres en las diferentes etapas del proceso, es decir, las chance de:  
+
+- Participar en Mercado Público: Es la razón de empresas lideradas por mujeres activas en la plataforma respecto de aquellas lideradas por hombres.
+- Ofertar en una Licitación/Compra Ágil: Considera la proporción de ofertas presentadas por empresas lideradas por mujeres (hombres) 
+- Adjudicar una licitación: Considera la proporción de licitaciones adjudicadas por empresas lideradas por mujeres (hombres)
+
+Toda la información fue obtenida de los servidores de ChileCompra
+
+## Resultados preliminares: Monto proveedoras
+
+```{r primer,warning=FALSE}
+q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds") %>% 
+  mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`),  "Hombres","Mujeres"), 
+         `Monto anual USD` = currency(`Monto anual USD`,symbol = "$", digits=2,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` = currency(`Cantidad OC`,symbol = "", digits=0,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."))
+  
+
+kableExtra::kable(
+  q_1,
+  col.names = c("Año", "Sello Mujer", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"),
+  digits = 2,
+  caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  kableExtra::footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+## Tasa de Participación monto proveedoras
+
+```{r, warning=FALSE}
+q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds") %>%
+  group_by(`Año`) %>%
+  mutate(`Total USD` = sum(`Monto anual USD`),
+         `Total OC` = sum(`Cantidad OC`)) %>% 
+  mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`),  "Hombres","Mujeres"), 
+         `Monto anual USD` = 
+           formattable::comma((`Monto anual USD`/`Total USD`)*100, decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` =   formattable::comma((`Cantidad OC`/`Total OC`)*100, decimal.mark = ",", big.mark = ".")) %>% 
+  select(-`Total USD`, -`Total OC`)
+  
+
+kable(
+  q_1,
+  col.names = c("Año", "Sello Mujer", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"),
+  digits = 2,
+  caption = "porcentaje del Monto total (MM USD) y porcentaje Órdenes de Compra por sexo de quien lidera la empresa, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+
+## Monto y cantidad de órdenes de compra según procedimiento de compra 
+
+```{r, eval=TRUE}
+q_3 = readr::read_rds(file = "q3_monto_cantidad_oc_segun_tipo_OC.rds") %>% 
+  mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`),  "Hombres","Mujeres"), 
+         `Monto anual USD` = currency(`Monto anual USD`,symbol = "$", digits=2,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` = currency(`Cantidad OC`,symbol = "", digits=0,big.mark = ".") %>% 
+           formattable::comma(decimal.mark = ",", big.mark = "."))
+  
+
+kable(
+  q_3,
+  col.names = c("Año", "Sello Mujer", "Tipo de Orden de Compra", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"),
+  digits = 2,
+  caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa y tipo de Orden de Compra, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+
+
+
+## Monto y cantidad de órdenes de compra según procedimiento de compra 
+
+```{r,warning=FALSE, eval=TRUE}
+q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds") %>% 
+  mutate(Sello = ifelse(is.na(Sello),  "Hombres","Mujeres"), 
+         `Monto anual USD` = 
+           formattable::comma((`Monto anual USD`), decimal.mark = ",", big.mark = "."),
+         `Cantidad OC` =   formattable::comma(`Cantidad OC`, decimal.mark = ",", big.mark = ".")) %>% 
+  setDT() %>% 
+  data.table::dcast(formula = NombreInstitucion ~ Sello,
+                    value.var = c("Monto anual USD", "Cantidad OC")) %>% 
+  arrange(desc(`Monto anual USD_Mujeres`))
+  
+
+kable(
+  q_2[1:15,],
+  col.names = c("Institución", "Monto Anual Hombres", "Monto Anual Mujeres", "Órdenes de Compra Hombres", "Órdenes de Compra Mujeres"),
+  digits = 2,
+  caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa y tipo de Orden de Compra, 2022-2023"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+```
+
+## Cantidad y Tasa de Participación de proveedoras en el sistema
+
+```{r, eval=TRUE}
+q_4 = readr::read_rds(file = "sello_proveedores.rds") %>% 
+  mutate(Sello = formattable::comma(Sello, decimal.mark = ",", big.mark = "."), 
+         prop = formattable::comma(prop, decimal.mark = ",", big.mark = ".")) 
+  
+kable(
+  q_4,
+  col.names = c("Sello Mujer", "Cantidad proveedores", "Proporción del total"),
+  digits = 2,
+  caption = "Empresas con Sello mujer 2022"
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>% 
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+
+
+```
+
+
+
+## Resultados preliminares
+
+
+
+
+```{r, include=TRUE, eval=TRUE}
+
+general = readr::read_rds(file = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/indice_agregado.rds")
+
+```
+
+En términos generales, el resultado del indcador propuesto es `r round(general[1,"indicador"],2)`. Lo que indica que en términos generales, las empresas lideradas por mujeres están claramente desaventajadas en relación a las empresas lideradas por hombres, aunque al realizar un zoom por institución nos encontraremos con un panorama mucho más heterogéneo.
+
+
+Sin embargo, es necesario notar que la versión agregada considera las tres dimensiones señaladas previamente, a diferencia del índice por instituciones que considera sólo dos (pues el ratio de participación es idéntico para todos).
+
+
+```{r cars, echo=FALSE, warning=FALSE}
+
+(
+  ind_inst_plot = ggplot(datos_ind_fil, aes(x = total_oc, y = indicador, size = total_n)) +
+    geom_point() +
+    geom_vline(xintercept = mean(datos_ind_fil$total_oc), linetype = "dashed", color = "blue", size = 1) +
+    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
+    labs(title = "IPPG vs Cantidad de OC's",
+         x = "Empresas ",
+         y = "IPPG",
+         size = "Tercera Variable") +
+    theme_minimal()
+)
+  
+
+# (
+# ind_inst_plotly = ggplotly(ind_inst_plot)  
+# )
+
+
+
+
+```
+
+
+## Resultados preliminares: Ranking de instituciones
+
+De un total de 961 entidades gubernamentales que operan a través del sistema, se procedió a rankear a cada una de acuerdo al resultado del índice. 
+
+A continuación se presenta un cuadro que resume los resultados de las 15 instituciones del Estado con mayor índice.
+
+```{r, echo=TRUE, include=FALSE}
+data = readr::read_rds(file = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/indice_por_institucion.rds")
+
+data = data %>%
+  select(`Institución Licitante`, r_adj, r_ofer, indicador) %>%
+  arrange(desc(indicador))
+
+kable(
+  data[1:15,],
+  col.names = c("Institución", "ratio adjudicación", "ratio ofertas", "indicador"),
+  digits = 2
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+```
+
+
+## Resultados preliminares: Ranking de instituciones
+
+Desde otro punto de vista, las instituciones con menor participación de empresas lideradas por mujeres de acuerdo a nuestro índice son las siguientes: 
+
+```{r, include=TRUE}
+
+data = data %>%
+  arrange(indicador)
+
+kable(
+  data[1:10,],
+  col.names = c("Institución", "ratio adjudicación", "ratio ofertas", "indicador"),
+  digits = 2
+  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
+  footnote(
+    general = "Elaboración propia a partir de datos de ChileCompra",
+    general_title = "Nota:",
+    footnote_as_chunk = TRUE
+    )
+```
+
+
+## Resultados preliminares: Ranking de instituciones
+
+De lo anterior se desprende que son muy pocas instituciones que favorecen a las mujeres en desmedro de los hombres (sólo 11), lo que se refleja en la distribución del índice por institución que se muestra a continuación 
+
+```{r, echo=FALSE}
+
+(
+p_1 = ggplot(data, aes(x = indicador)) +
+  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black") +
+  geom_vline(aes(xintercept = median(indicador)), color = "red", linetype = "dashed", size = 10) +
+  labs(title = "Distribución IPPG",
+       x = "IPPG",
+       y = "Frecuencia") +
+  theme_minimal()
+  
+)
+```
+
+
+
+```{r pressure, echo=FALSE, warning=FALSE}
+
+(
+  ind_hist = ggplot(datos_ind_fil %>% 
+                      arrange(indicador), aes(indicador, , y = ..density..)) +
+    geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
+    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
+    geom_vline(xintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
+    labs(title = "Histograma del IPPG",
+         x = "IPPG",
+         y = "Densidad")+
+    theme_minimal()
+  
+)
+
+```
+
+
+
+## Pasos a seguir
+
+\footnotesize
+
+Más allá de los resultados preliminares aquí expuestos, quedan varios pasos a seguir, de enre los cuales se puede considerar: 
+
+- Considerar otros posibles universos en la construcción del índice: en esta propuesta se utilizaron las empresas participantes de la plataforma durante el año 2022, pero existen otros criterios que potencialmente pueden variar los resultados aquí presentados y que por tanto deben ser considerados para un ejercicio de análisis de sensibilidad. 
+- Es necesario definir si para el índice desagregado consideraremos sólo dos dimensiones o incluiremos la tercera a pesar de no variar. 
+- Queda pendiente analizar la evolución de otros indicadores propuestos en la minuta técnica de propuesta metodológica
+- Calcular los índices complementarios propuestos por Permanyer (2010) con la finalidad de identificar con mayor precisión las manginitudes de las brechas y la severidad de las mismas. 
+
+

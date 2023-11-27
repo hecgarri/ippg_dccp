@@ -436,6 +436,10 @@ indice =  data_index %>%
            ,var_adjudica = ((indice_adjudica-lag(indice_adjudica))/lag(indice_adjudica))*100
 )
 
+saveRDS(datos_ind_fil,
+        file = paste0(gsub("-", "", today()),
+                      gsub(" ","_"," datos índice desagregado por instituciones.rds")))
+
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +
     geom_line(aes(y = indice, color = "General"), size = 1) +
