@@ -436,21 +436,10 @@ indice =  data_index %>%
            ,var_adjudica = ((indice_adjudica-lag(indice_adjudica))/lag(indice_adjudica))*100
 )
 
-saveRDS(datos_ind_fil,
+saveRDS(indice,
         file = paste0(gsub("-", "", today()),
-                      gsub(" ","_"," datos índice desagregado por instituciones.rds")))
+                      gsub(" ","_"," datos índice agregado.rds")))
 
-(
-  indice_plot = ggplot(indice, aes(x = fecha)) +
-    geom_line(aes(y = indice, color = "General"), size = 1) +
-    geom_line(aes(y = indice_part, color = "Participación"), size = 1) +
-    geom_line(aes(y = indice_oferta, color = "Oferta"), size = 1) +
-    geom_line(aes(y = indice_adjudica, color = "Adjudicación"), size = 1) +
-    labs(title = "Índice de Participación con Perspectiva de Género",
-         y = "Índice (Base: Enero 2022)",
-         x = "Fecha") +
-    theme_minimal()
-)
 
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +
@@ -750,7 +739,16 @@ cor.test(datos_ind_fil$total_oc , datos_ind_fil$indicador)
 
 cor.test(datos_ind_fil$total_n,datos_ind_fil$indicador)
 
-ggplotly(ind_inst_plot)
+
+
+(
+  ind_inst_plotly = ggplotly(ind_inst_plot)
+)
+
+htmlwidgets::saveWidget(ind_inst_plotly,
+                        file = paste0(gsub("datos", "ippg_dccp", wd_path),"/indice_instituciones.html"))
+
+
 
 # Proposición: Excluidos los Outliers los datos se comportan según una normal
 # 
@@ -768,19 +766,9 @@ ggplotly(ind_inst_plot)
   
 )
 
-ggplotly(ind_hist)
+ind_hist_plotly = ggplotly(ind_hist)
 
 
-(
-  grafico_barras <- plot_ly(data = datos_ind_fil, x = ~datos_ind_fil$Organismo, y = ~datos_ind_fil$indicador, type = "bar", marker = list(color = "blue"))  
-  
-  layout_grafico <- layout(title = "Gráfico de Barras Vertical Ordenado Ascendentemente",
-                           xaxis = list(title = "Categorías"),
-                           yaxis = list(title = "Valores"),
-                           barmode = "group")
-  
-  # Combina el gráfico y el diseño
-  grafico_final <- grafico_barras %>% layout(layout_grafico)
-  
-)
+htmlwidgets::saveWidget(ind_hist_plotly,
+                        file = paste0(gsub("datos", "ippg_dccp", wd_path),"/histogram_instituciones.html"))
 

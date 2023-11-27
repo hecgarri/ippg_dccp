@@ -1,7 +1,16 @@
 ---
-title: "Índice de Participación con Perspectiva de Género"
-output: slidy_presentation
+title: "Índice de Participación con Perspectiva de Género (IPPG)"
+subtitle: "Una propuesta para medir la desigualdad de género en compras públicas"
+author: "División de Estudios e Inteligencia de Negocios"
+institute: "Dirección ChileCompra"
 date: "`r Sys.Date()`"
+output:
+  slidy_presentation:
+    self_contained: false
+    theme: "journal"
+    transition: "fade"
+    incremental: true
+
 ---
 
 ```{r setup, include=FALSE}
@@ -9,6 +18,8 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE, warning = FALSE
     ) 
 options(tinytex.verbose = TRUE)
+
+#"default", "bootstrap", "cerulean", "cosmo", "darkly", "flatly", "journal", "lumen", "paper", "readable", "sandstone", "simplex", "spacelab", "united", "yeti"
 ```
 
 
@@ -28,7 +39,7 @@ packages = c("tidyverse"
              , "kableExtra"
              ,"formattable" 
              ,"readr"
-             ,"here")
+             ,"widgetframe")
 
 load_pkg(packages)
 
@@ -61,13 +72,30 @@ datos_ind_fil = read_rds(file =details$files[grep("_desagregado", details$files)
 
 
 ```
+## ChileCompra
 
-## Antecedentes
+- La Dirección de Compras y Contratación Pública, Dirección ChileCompra es una entidad clave para más de 850 organismos públicos en Chile, facilitando la adquisición de insumos y servicios esenciales para el Estado. A través de su plataforma transaccional, [Mercado Público](https://www.mercadopublico.cl), conecta la demanda de compradores públicos con la oferta de proveedores, asegurando eficiencia y competencia.
 
-- La Dirección de Compras y Contratación Pública (ChileCompra) actualizó recientemente su directiva N°20 en la que incorpora perspectiva de género en las compras públicas. 
-- A raíz de lo anterior, desde el ministerio de Hacienda se solicita medir el fenómeno para obtener un adecuado diagnóstico que permita en el futuro diseñar medidas que promuevan la participación de las mujeres en el sistema
+- La Dirección ChileCompra administra esta plataforma descentralizada, operando bajo un marco regulatorio único basado en principios como transparencia y eficiencia. Creada en 2003 por la Ley de Compras Públicas N° 19.886, está bajo la supervigilancia del Presidente de la República y depende del Ministerio de Hacienda.
 
-- En virtud de lo anterior, a continuación se presentarán algunos resultados preliminares, continuando con la propuesta metodológica de desarrollo de un Índice de Participación con Perspectiva de Género (IPPG) en Mercado Público, presentada el día 24 de agosto de 2023 
+- Recientemente el Senado aprobó por unanimidad el proyecto de modernización de la Ley de Compras Públicas, con el objetivo de mejorar la calidad del gasto, elevar la probidad y transparencia, e integrar principios de economía circular. La ley, tras 20 años de vigencia, destaca por fortalecer la participación de Empresas de Menor Tamaño, impulsar la innovación y la sustentabilidad, y ampliar la cobertura del sistema de compras públicas. Su implementación marca un hito en las reformas modernizadoras del Estado, conforme al compromiso del Pacto Fiscal para el Desarrollo.
+
+- En 2022 las transacciones de organismos del Estado a través de la plataforma de ChileCompra ascendieron a más de US$ 15.000 millones, cerca de 4,5% del PIB, a través de más de 1.800.000 órdenes de compra, siendo uno de los mercados más importantes del país.
+
+- En mercadopublico.cl, se utilizan diversos mecanismos de compra para asegurar transparencia y competencia, destacando la licitación pública, trato directo, y modalidades innovadoras como Compra Ágil y Convenio Marco. Así como otros mecanismos que incoporará la nueva normativa 
+
+## Motivación
+
+- La Dirección ChileCompra actualizó recientemente su directiva N°20 en la que incorpora perspectiva de género en las compras públicas. Entendiendo esta como un enfoque que analiza y aborda las desigualdades y roles de género para lograr una sociedad más equitativa, reconociendo las diferencias y luchando por dotar de mayor autonomía a las mujeres, facilitando el acceso a igualdad de oportunidades entre mujeres y hombres. 
+
+- La autonomía de la mujer abarca su libertad y capacidad de autodeterminación en dimensiones físicas, de toma de decisiones y económicas. Implica el control sobre su cuerpo y decisiones de salud, libertad en decisiones educativas y familiares, y destaca como pilar crucial al permitir su independencia financiera y participación activa en decisiones sociales, a través de la autonomía económica.
+
+- Proporcionar a las mujeres acceso a oportunidades económicas y la capacidad de tomar decisiones financieras independientes no solo fortalece su posición en la sociedad, sino que también contribuye a la construcción de comunidades más equitativas. 
+
+- La autonomía económica para las mujeres encuentra un aliado estratégico en las compras públicas, dada su magnitud. El considerable volumen de estas adquisiciones no solo representa una oportunidad clave para empresas lideradas por mujeres, sino que también impulsa la independencia financiera al facilitar el acceso a contratos significativos
+
+- De allí que el **Objetivo General** de esta propuesta consiste en  **desarrollar e implementar un indicador para medir la participación de mujeres como proveedoras en el sistema de compras públicas** de Chile, con el propósito de evaluar y promover la equidad de género en las distintas etapas del proceso y contribuir a la autonomía económica de las mujeres.
+
 
 ## Propuesta
 
@@ -245,29 +273,11 @@ En términos generales, el resultado del indcador propuesto es `r round(general[
 Sin embargo, es necesario notar que la versión agregada considera las tres dimensiones señaladas previamente, a diferencia del índice por instituciones que considera sólo dos (pues el ratio de participación es idéntico para todos).
 
 
-```{r cars, echo=FALSE, warning=FALSE}
+<!--html_preserve-->
 
-(
-  ind_inst_plot = ggplot(datos_ind_fil, aes(x = total_oc, y = indicador, size = total_n)) +
-    geom_point() +
-    geom_vline(xintercept = mean(datos_ind_fil$total_oc), linetype = "dashed", color = "blue", size = 1) +
-    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
-    labs(title = "IPPG vs Cantidad de OC's",
-         x = "Empresas ",
-         y = "IPPG",
-         size = "Tercera Variable") +
-    theme_minimal()
-)
-  
+<iframe src="indice_instituciones.html" width = "1500" height = "700"></iframe>
 
-# (
-# ind_inst_plotly = ggplotly(ind_inst_plot)  
-# )
-
-
-
-
-```
+<!--html_preserve-->
 
 
 ## Resultados preliminares: Ranking de instituciones
@@ -296,6 +306,8 @@ kable(
 ```
 
 
+
+
 ## Resultados preliminares: Ranking de instituciones
 
 Desde otro punto de vista, las instituciones con menor participación de empresas lideradas por mujeres de acuerdo a nuestro índice son las siguientes: 
@@ -322,40 +334,22 @@ kable(
 
 De lo anterior se desprende que son muy pocas instituciones que favorecen a las mujeres en desmedro de los hombres (sólo 11), lo que se refleja en la distribución del índice por institución que se muestra a continuación 
 
-```{r, echo=FALSE}
-
-(
-p_1 = ggplot(data, aes(x = indicador)) +
-  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black") +
-  geom_vline(aes(xintercept = median(indicador)), color = "red", linetype = "dashed", size = 10) +
-  labs(title = "Distribución IPPG",
-       x = "IPPG",
-       y = "Frecuencia") +
-  theme_minimal()
-  
-)
-```
 
 
+<!--html_preserve-->
 
-```{r pressure, echo=FALSE, warning=FALSE}
+<iframe src="histogram_instituciones.html" width = "1500" height = "700"></iframe>
 
-(
-  ind_hist = ggplot(datos_ind_fil %>% 
-                      arrange(indicador), aes(indicador, , y = ..density..)) +
-    geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
-    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
-    geom_vline(xintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
-    labs(title = "Histograma del IPPG",
-         x = "IPPG",
-         y = "Densidad")+
-    theme_minimal()
-  
-)
-
-```
+<!--html_preserve-->
 
 
+## Gráfico interactivo
+
+<!--html_preserve-->
+
+<iframe src="indice_interactivo.html" width = "1500" height = "700"></iframe>
+
+<!--html_preserve-->
 
 ## Pasos a seguir
 
