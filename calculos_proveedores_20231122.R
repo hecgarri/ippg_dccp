@@ -664,36 +664,33 @@ adjudican_instituciones = readr::read_rds(file = "20231124_institución_recibe_u
 
 
 (
-  of_inst = ofertan_inst_ %>% 
+  of_inst = ofertan_instituciones %>% 
     group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
-    summarise(n = n(), 
-              n_of = sum(`Cantidad ofertas`)) %>% 
+    summarise(n = n()) %>% 
     setDT() %>% 
-    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n","n_of"))  %>% 
-    mutate(r_ofer = (n_Mujeres/n_Hombres))
+    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n"))  %>% 
+    mutate(r_ofer = (Mujeres/Hombres))
 )
 
 
 (
-  adj_inst = adjudican_inst_ %>% 
-    group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
+  adj_inst = adjudican_instituciones %>% 
     mutate(`Sello Mujer`=ifelse(`Sello Mujer`==1, "Mujeres", "Hombres")) %>% 
-    summarise(n = n(),
-              n_oc = sum(`Cantidad OC`)) %>% 
+    group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
+    summarise(n = n()) %>% 
     setDT() %>% 
-    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n", "n_oc"))  %>% 
-    mutate(r_adj = (n_Mujeres/n_Hombres))
+    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n"))  %>% 
+    mutate(r_adj = (Mujeres/Hombres))
 )
 
 
 data_index_inst = 
   of_inst %>% 
   left_join(adj_inst, by = c("Organismo")) %>% 
-  mutate(indicador = sqrt(r_ofer*r_adj),
-         total_n = n_oc_Mujeres+n_oc_Hombres,
-         total_oc = n_of_Mujeres+n_of_Mujeres) %>% 
+  mutate(indicador = sqrt(r_ofer*r_adj)) %>% 
   filter(!is.na(indicador))
 
+saveRDS(data_index_inst, file = "data_index_inst.rds")
 
 # ANÁLISIS Y VISUALIZACIÓN DE LOS DATOS ==========================================
 
@@ -720,7 +717,7 @@ saveRDS(datos_ind_fil,
 file = paste0(gsub("-", "", today()),
               gsub(" ","_"," datos índice desagregado por instituciones.rds")))
 
-# Proposición: no hay relación entre el número de OC y el índice ======
+  # Proposición: no hay relación entre el número de OC y el índice ======
 # Este gráfico queda para nuestro propio análisis
 
 (
@@ -772,3 +769,15 @@ ind_hist_plotly = ggplotly(ind_hist)
 htmlwidgets::saveWidget(ind_hist_plotly,
                         file = paste0(gsub("datos", "ippg_dccp", wd_path),"/histogram_instituciones.html"))
 
+
+
+# Resumir texto 
+# Cambiar de tablas a gráficos
+# Revisar tabla de montos y oc según procedimiento de compra
+# Simplificar nomenclatura matemática
+# Explicar el proceso de participación en el sistema 
+# Cambiar el tipo de OC: Licitación, trato directo, trato directo,
+#  convenio marco. Agrupar según un CASE
+# Especificar la importancia de las instituciones no sólo
+#  en términos de las cantidades 
+#  Presentar Scatterplot, entre los montos y la proporción de esos montos 
