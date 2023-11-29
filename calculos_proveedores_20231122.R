@@ -9,11 +9,10 @@ wd_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/da
 
 setwd(wd_path)
 
-
 #Carga de paquetes necesarios para el análisis ==========================================
 #
 load_pkg <- function(pack){
-  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
+  create.pkg <- pack[!(pack %in% installed.packages()[, "Packfage"])]
   if (length(create.pkg))
     install.packages(create.pkg, dependencies = TRUE)
   sapply(pack, require, character.only = TRUE)
@@ -44,60 +43,96 @@ con3 = RODBC::odbcConnect("dw", uid = "datawarehouse", pwd = "datawarehouse") #D
 # INSCRITOS EN LA PLATAFORMA ÚLTIMO AÑO ===============================================================
 # 
 
-inscritos = function(x,y) sqlQuery(con2,paste0(
-  "
-                    DECLARE @YEAR AS INT;
-                    DECLARE @MONTH AS INT;
-                    
-                    SET @YEAR = ",y,";
-                    SET @MONTH = ",x,";
-                    
-                    DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-                    DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
-                    , @endDate datetime = dateadd(month, +1, @currentMonth);
-                    
-                    --with temp as (
-                    SELECT DISTINCT
-                        UPPER([orgTaxID]) as [Rut Proveedor]
-                        ,[orgEnterprise] [EntCode]
-                        ,UPPER([orgLegalName]) as [Razon Social]
-                        , (CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
-                        ,min(cast([orgCreationDate] as date)) [Fecha de creación empresa]
-                        , @MONTH [Mes Central]
-        				        , @YEAR [Anio Central]
-        				        , @endDate [Final]
-                    FROM [DCCPPlatform].[dbo].[gblOrganization] O
-                    LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
-                            FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                            WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
-                            (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                            (year(s.fechacreacion)<= @YEAR)
-                            ) s on O.orgEnterprise=s.EntCode collate Modern_Spanish_CI_AI
-                    WHERE orgCreationDate  <= @endDate 
-                        AND orgClass = 1 -- proveedores o proveedoras
-                        AND orgIsActive = 1
-                        AND orgIsTest = 0
-                    GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
-                    --)
-                    
-                    --SELECT 
-                    
-         ")
-) 
+file = details$files[grep("inscritos", details$files)][1]
+
+descargar_y_guardar_inscritos <- function(file) {
+  require(lubridate)
+  # Verifica si el día actual es igual al quinto día del mes
+  if (mday(today()) <= 5) {
+    start <- Sys.time()
+    
+    # Lógica para obtener los inscritos directamente
+    x <- month(today()) - 1
+    y <- year(today())
+    
+    file = file 
+    
+    # Comprueba si el archivo ya existe y lo carga
+    if (file.exists(file)) {
+      inscritos <- readRDS(file)
+      cat("Datos cargados desde el archivo existente.\n")
+    } else {
+      inscritos <- sqlQuery(con2, paste0(
+        "
+        DECLARE @YEAR AS INT;
+        DECLARE @MONTH AS INT;
+        
+        SET @YEAR = ", y, ";
+        SET @MONTH = ", x, ";
+        
+        DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
+        DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
+        , @endDate datetime = dateadd(month, +1, @currentMonth);
+        
+        SELECT DISTINCT
+            UPPER([orgTaxID]) as [Rut Proveedor]
+            ,[orgEnterprise] [EntCode]
+            ,UPPER([orgLegalName]) as [Razon Social]
+            , (CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+            ,min(cast([orgCreationDate] as date)) [Fecha de creación empresa]
+            , @MONTH [Mes Central]
+            , @YEAR [Anio Central]
+            , @endDate [Final]
+        FROM [DCCPPlatform].[dbo].[gblOrganization] O
+        LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
+                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
+                (year(s.fechacreacion)<= @YEAR)
+                ) s on O.orgEnterprise=s.EntCode collate Modern_Spanish_CI_AI
+        WHERE orgCreationDate  <= @endDate 
+            AND orgClass = 1 -- proveedores o proveedoras
+            AND orgIsActive = 1
+            AND orgIsTest = 0
+        GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
+        "
+      ))
+      
+      # Guarda el objeto inscritos en un archivo
+      saveRDS(inscritos, file = "inscritos_resultado.rds")
+    }
+    
+    end <- Sys.time()
+    tiempo_transcurrido <- difftime(end, start, units = "mins")
+    
+    resultado <- list(tiempo_transcurrido = tiempo_transcurrido, datos = inscritos)
+    saveRDS(resultado,
+    file = paste0(gsub("-", "", today()),
+                  gsub(" ","_"," inscritos históricos en la plataforma.rds")))
+    
+    return(resultado)
+  } else {
+    # Retorna un mensaje indicando que la función no se ejecutó
+    mensaje <- "La descarga no se ejecutó porque la fecha actual es superior al quinto día del mes."
+    cat(mensaje, "\n")
+    
+    file <- file 
+    
+    # Intenta cargar los datos desde el archivo aunque la función no se haya ejecutado
+    if (file.exists(file)) {
+      inscritos <- readr::read_rds(file = file)
+      cat("Datos cargados desde el archivo existente.\n")
+      return(list(datos = inscritos))
+    } else {
+      return(mensaje)
+    }
+  }
+}
 
 
-# start <- Sys.time()
-# 
-# ins_2023 = lapply((month(today())-1), function(x) inscritos(x,year(today()))) %>%
-#   data.table::rbindlist()
-# 
-# end <- Sys.time()
-# difftime(end, start, units="mins")
+# Llama a la función
 
-# 
-#saveRDS(ins_2023, file = paste0(gsub("-", "", today()),gsub(" ","_"," inscritos históricos en la plataforma.rds")))
-# #
-
+inscritos_ <- descargar_y_guardar_inscritos(file = file)
 
 
 #
@@ -183,6 +218,7 @@ login = function(x,y, window = -24) sqlQuery(con2, paste0(
 # 
 # 
 
+ 
 # OFERENTES DIFERENTES PROCEDIMIENTOS DE COMPRA ====================================
 
 ofertan = function(x,y, window = -12) sqlQuery(con2, paste0(

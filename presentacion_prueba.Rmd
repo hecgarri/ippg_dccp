@@ -226,8 +226,8 @@ q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds")
 (
   oc_perc_plot = ggplot(q_2, aes(x = perc_muj, y = `perc_usd`, size = total_usd)) +
     geom_point() +
-    geom_vline(xintercept = mean(q_2$perc_muj,na.rm = TRUE), linetype = "dashed", color = "blue", size = 1) +
-    geom_hline(yintercept = mean(q_2$perc_usd,na.rm = TRUE), linetype = "dashed", color = "red", size = 1) +
+    geom_vline(xintercept = mean(q_2$perc_muj,na.rm = TRUE), linetype = "dashed", color = "blue", linewidth = 1) +
+    geom_hline(yintercept = mean(q_2$perc_usd,na.rm = TRUE), linetype = "dashed", color = "red", linewidth = 1) +
     labs(title = "Participación de las mujeres en OC y Montos",
          x = "Porcentaje OC's",
          y = "porcentaje Monto OC's",
