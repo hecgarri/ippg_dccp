@@ -245,49 +245,65 @@ q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds")
 cuad_1 = q_2 %>% 
   mutate(media_x=mean(perc_muj,na.rm = TRUE),
          media_y = mean(perc_usd,na.rm = TRUE)) %>% 
-  filter(perc_muj> media_x & perc_usd>media_y) %>% 
-  arrange(desc(`Monto anual USD_Mujeres`))
-  
+  filter(perc_muj> media_x & perc_usd>media_y) %>%
+  arrange(desc(`Monto anual USD_Mujeres`)) %>% 
+  mutate(monto_mujeres = `Monto anual USD_Mujeres`)
+
+cuad_1_long <- tidyr::pivot_longer(cuad_1 %>% 
+  arrange(desc(`Monto anual USD_Mujeres`)), cols = c(`Monto anual USD_Hombres`, `Monto anual USD_Mujeres`), names_to = "Genero", values_to = "Monto") %>% 
+  arrange(desc(monto_mujeres))
+
+
 
 # Define los colores para "Hombres" y "Mujeres"
-colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
+colores <- c("Monto anual USD_Hombres" = "#87CEEB",  # Celeste pastel para Hombres
+             "Monto anual USD_Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
 
 
-# Gráfico de barras para los montos
-# Gráfico de barras para los montos
-cuad_plot_1 = ggplot(cuad_1[1:10, ], aes(x = reorder(NombreInstitucion, `Monto anual USD_Mujeres`))) +
-  geom_bar(aes(y = `Monto anual USD_Mujeres`), stat = "identity", position = "stack", fill = "#FFB6C1", alpha = 1, color = "black") +
-    geom_bar(aes(y = `Monto anual USD_Hombres`), stat = "identity", position = "stack", fill = "#87CEEB", alpha = 1, color = "black")+
-  labs(title = "OC's por Institución", y = "Cantidad") +
-  geom_text(data = cuad_1[1:10, ], aes(label = scales::comma(round(`Monto anual USD_Mujeres`)), y = `Monto anual USD_Mujeres`), vjust = 0.5)+
-  geom_text(data = cuad_1[1:10, ], aes(label = scales::comma(round(`Monto anual USD_Hombres`)), y = `Monto anual USD_Hombres`), vjust = 1.5)+
+# Crear el gráfico apilado
+cuad_plot_1 <- ggplot(cuad_1_long[1:20,], aes(x = reorder(NombreInstitucion, monto_mujeres), y = Monto, fill = Genero)) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
+    scale_fill_manual(values = colores)+
+  labs(title = "Monto transado por Institución", y = "Cantidad")+
+  geom_text(data = cuad_1_long[1:20, ],
+            aes(label = scales::comma(round(Monto)), y = Monto),
+            position = position_dodge(width = 1),  # Ancho de la posición dodge
+            vjust = 0.5)+
   theme_minimal()+
   coord_flip()+
-  ylim(0,max(cuad_1[1:10, ]$total_usd))+
   labs(x = "Instituciones", y = "Monto en millones de dólares")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))
-
-
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
+    theme(legend.position = "none")
 
 cuad_1 = q_2 %>% 
   mutate(media_x=mean(perc_muj,na.rm = TRUE),
          media_y = mean(perc_usd,na.rm = TRUE)) %>% 
   filter(perc_muj> media_x & perc_usd>media_y) %>% 
-  arrange(desc(`Cantidad OC_Mujeres`))
+  mutate(cantidad_mujeres = `Cantidad OC_Mujeres`)
 
-# Gráfico de barras para los montos
-cuad_plot_2 = ggplot(cuad_1[1:10, ], aes(x = reorder(NombreInstitucion, `Cantidad OC_Mujeres`))) +
-  geom_bar(aes(y = `Cantidad OC_Hombres`), stat = "identity", position = "dodge", fill = "#87CEEB", alpha = 1, color = "black") +
-  geom_bar(aes(y = `Cantidad OC_Mujeres`), stat = "identity", position = "dodge", fill = "#FFB6C1", alpha = 1, color = "black") +
-  labs(title = "OC's por Institución", y = "Cantidad") +
-  geom_text(data = cuad_1[1:10, ], aes(label = scales::comma(round(`Cantidad OC_Mujeres`)), y = `Cantidad OC_Mujeres`), vjust = 0.5)+
-  geom_text(data = cuad_1[1:10, ], aes(label = scales::comma(round(`Cantidad OC_Hombres`)), y = `Cantidad OC_Hombres`), vjust = 1.5)+
+cuad_1_long <- tidyr::pivot_longer(cuad_1 %>% 
+  arrange(desc(`Cantidad OC_Mujeres`)), cols = c(`Cantidad OC_Hombres`, `Cantidad OC_Mujeres`), names_to = "Genero", values_to = "OCs") 
+
+colores <- c("Cantidad OC_Hombres" = "#87CEEB",  # Celeste pastel para Hombres
+             "Cantidad OC_Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
+
+
+# Crear el gráfico apilado
+cuad_plot_2 <- ggplot(cuad_1_long[1:20,], aes(x = reorder(NombreInstitucion, cantidad_mujeres), y = OCs, fill = Genero)) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
+    scale_fill_manual(values = colores)+
+  labs(title = "Cantidad de órdenes de compra por institución", y = "Cantidad")+
+  geom_text(data = cuad_1_long[1:20, ],
+            aes(label = scales::comma(round(OCs)), y = OCs),
+            position = position_dodge(width = 1),  # Ancho de la posición dodge
+            vjust = 0.5)+
   theme_minimal()+
   coord_flip()+
-  ylim(0,max(cuad_1[1:10, ]$total_oc))+
-  labs(x = "Instituciones", y = "Cantidad de Órdenes de Compra")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))
+  labs(x = "Instituciones", y = "Cantidad de órdenes de compra")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
+    theme(legend.position = "none")
+
+
 
 grid.arrange(cuad_plot_1, cuad_plot_2, ncol = 2)
 
@@ -301,6 +317,8 @@ q_4 = readr::read_rds(file = "sello_proveedores.rds") %>%
   mutate(Sello = formattable::comma(Sello, decimal.mark = ",", big.mark = "."), 
          prop = formattable::comma(prop, decimal.mark = ",", big.mark = ".")) 
 
+colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
+             "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
 
 ggplot(q_4, aes(x = reorder(`Sello Mujer`, -Sello), y = `Sello`, fill = `Sello Mujer`)) +
   geom_bar(stat = "identity", color = "black") +

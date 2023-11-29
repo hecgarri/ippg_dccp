@@ -4,3 +4,4 @@
 .Ruserdata
 # Ignorar archivos con extensión .log
 *.rds
+*.docx
