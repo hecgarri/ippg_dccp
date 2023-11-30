@@ -12,7 +12,7 @@ setwd(wd_path)
 #Carga de paquetes necesarios para el análisis ==========================================
 #
 load_pkg <- function(pack){
-  create.pkg <- pack[!(pack %in% installed.packages()[, "Packfage"])]
+  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
   if (length(create.pkg))
     install.packages(create.pkg, dependencies = TRUE)
   sapply(pack, require, character.only = TRUE)
@@ -43,11 +43,39 @@ con3 = RODBC::odbcConnect("dw", uid = "datawarehouse", pwd = "datawarehouse") #D
 # INSCRITOS EN LA PLATAFORMA ÚLTIMO AÑO ===============================================================
 # 
 
-file = details$files[grep("inscritos", details$files)][1]
 
-descargar_y_guardar_inscritos <- function(file) {
+
+
+
+
+
+
+descargar_y_guardar_inscritos <- function(query, variable) {
   require(lubridate)
   # Verifica si el día actual es igual al quinto día del mes
+  # 
+  
+  #Detalles sobre los archivos guardados en el directorio de trabajo 
+  #
+  
+  detalles = function(path = wd_path, pattern = "*.rds"){
+    require(dplyr)
+    
+    details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
+    
+    details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
+      filter(isdir==FALSE)
+    
+    details$files = rownames(details)
+    
+    rownames(details) = NULL
+    
+    return(details)
+  }
+  
+    details = detalles()
+  
+  
   if (mday(today()) <= 5) {
     start <- Sys.time()
     
@@ -55,20 +83,22 @@ descargar_y_guardar_inscritos <- function(file) {
     x <- month(today()) - 1
     y <- year(today())
     
-    file = file 
+    file = details$files[grep(paste0(variable), details$files)][1] 
     
     # Comprueba si el archivo ya existe y lo carga
-    if (file.exists(file)) {
+    if (file.exists(paste0(file))) {
       inscritos <- readRDS(file)
       cat("Datos cargados desde el archivo existente.\n")
     } else {
-      inscritos <- sqlQuery(con2, paste0(
+      inscritos <- function(x,y) {
+        sqlQuery(con2, sprintf(
         "
-        DECLARE @YEAR AS INT;
         DECLARE @MONTH AS INT;
+        DECLARE @YEAR AS INT;
         
-        SET @YEAR = ", y, ";
-        SET @MONTH = ", x, ";
+        SET @MONTH = %s;
+        SET @YEAR = %s;
+        
         
         DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
         DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
@@ -95,7 +125,7 @@ descargar_y_guardar_inscritos <- function(file) {
             AND orgIsActive = 1
             AND orgIsTest = 0
         GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
-        "
+        ",x,y)
       ))
       
       # Guarda el objeto inscritos en un archivo
@@ -132,7 +162,7 @@ descargar_y_guardar_inscritos <- function(file) {
 
 # Llama a la función
 
-inscritos_ <- descargar_y_guardar_inscritos(file = file)
+inscritos_ <- descargar_y_guardar_inscritos(query = query_ins,variable = "inscritos")
 
 
 #
@@ -368,22 +398,6 @@ adjudican = function(x,y,window = -12) sqlQuery(con2, paste0(
 #
 
 
-#Detalles sobre los archivos guardados en el directorio de trabajo ======================
-
-detalles = function(path = wd_path, pattern = "*.rds"){
-  require(dplyr)
-  
-  details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
-  
-  details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
-    filter(isdir==FALSE)
-  
-  details$files = rownames(details)
-  
-  rownames(details) = NULL
-  
-  return(details)
-}
 
 details = detalles()
 
