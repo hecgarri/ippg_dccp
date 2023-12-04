@@ -43,35 +43,30 @@ con3 = RODBC::odbcConnect("dw", uid = "datawarehouse", pwd = "datawarehouse") #D
 # INSCRITOS EN LA PLATAFORMA ÚLTIMO AÑO ===============================================================
 # 
 
+data_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos"
 
+#Detalles sobre los archivos guardados en el directorio de trabajo 
+#
 
+detalles = function(path = wd_path, pattern = "*.rds"){
+  require(dplyr)
+  
+  details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
+  
+  details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
+    filter(isdir==FALSE)
+  
+  details$files = rownames(details)
+  
+  rownames(details) = NULL
+  
+  return(details)
+}
 
-
-
-
-
-descargar_y_guardar_inscritos <- function(query, variable) {
+descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
   require(lubridate)
   # Verifica si el día actual es igual al quinto día del mes
   # 
-  
-  #Detalles sobre los archivos guardados en el directorio de trabajo 
-  #
-  
-  detalles = function(path = wd_path, pattern = "*.rds"){
-    require(dplyr)
-    
-    details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
-    
-    details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
-      filter(isdir==FALSE)
-    
-    details$files = rownames(details)
-    
-    rownames(details) = NULL
-    
-    return(details)
-  }
   
     details = detalles()
   
@@ -83,14 +78,8 @@ descargar_y_guardar_inscritos <- function(query, variable) {
     x <- month(today()) - 1
     y <- year(today())
     
-    file = details$files[grep(paste0(variable), details$files)][1] 
     
-    # Comprueba si el archivo ya existe y lo carga
-    if (file.exists(paste0(file))) {
-      inscritos <- readRDS(file)
-      cat("Datos cargados desde el archivo existente.\n")
-    } else {
-      inscritos <- function(x,y) {
+      query <- function(x,y,...) {
         sqlQuery(con2, sprintf(
         "
         DECLARE @MONTH AS INT;
@@ -126,43 +115,39 @@ descargar_y_guardar_inscritos <- function(query, variable) {
             AND orgIsTest = 0
         GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
         ",x,y)
-      ))
+        )
+        }
       
-      # Guarda el objeto inscritos en un archivo
-      saveRDS(inscritos, file = "inscritos_resultado.rds")
-    }
     
+    
+      inscritos = query(x=x, y=y)
+      
     end <- Sys.time()
     tiempo_transcurrido <- difftime(end, start, units = "mins")
     
-    resultado <- list(tiempo_transcurrido = tiempo_transcurrido, datos = inscritos)
-    saveRDS(resultado,
-    file = paste0(gsub("-", "", today()),
-                  gsub(" ","_"," inscritos históricos en la plataforma.rds")))
+    resultado <- list(datos = inscritos)
+    saveRDS(resultado, file = paste0(gsub("-", "", today()),
+                   gsub(" ","_"," inscritos históricos en la plataforma_"),y,".rds"))
     
     return(resultado)
-  } else {
+  
+    } else {
     # Retorna un mensaje indicando que la función no se ejecutó
     mensaje <- "La descarga no se ejecutó porque la fecha actual es superior al quinto día del mes."
     cat(mensaje, "\n")
     
-    file <- file 
+    file = details$files[grep(paste0("inscritos_históricos"), details$files)][1]  
     
     # Intenta cargar los datos desde el archivo aunque la función no se haya ejecutado
-    if (file.exists(file)) {
-      inscritos <- readr::read_rds(file = file)
+    if (file.exists(file.path(wd_path, file))) {
+      inscritos <- readr::read_rds(file = file.path(wd_path, file))
       cat("Datos cargados desde el archivo existente.\n")
       return(list(datos = inscritos))
     } else {
       return(mensaje)
     }
   }
-}
-
-
-# Llama a la función
-
-inscritos_ <- descargar_y_guardar_inscritos(query = query_ins,variable = "inscritos")
+  }
 
 
 #
@@ -251,79 +236,136 @@ login = function(x,y, window = -24) sqlQuery(con2, paste0(
  
 # OFERENTES DIFERENTES PROCEDIMIENTOS DE COMPRA ====================================
 
-ofertan = function(x,y, window = -12) sqlQuery(con2, paste0(
-  "
-              DECLARE @YEAR AS INT;
-              DECLARE @MONTH AS INT;
-                
-              SET @YEAR = ",y,";
-              SET @MONTH = ",x,";
-                
-              DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-              DECLARE @startDate datetime = dateadd(month,",window,", @currentMonth)
-              , @endDate datetime = dateadd(month, 1, @currentMonth);
-              
-              WITH TEMP as(
-          
-              SELECT DISTINCT
-                    UPPER(C.orgTaxID) [Rut Proveedor]
-                    ,C.orgEnterprise [EntCode]
-                    ,C.orgLegalName [Razon Social]
-                    ,'Oferta en licitaciones (o convenio Marco)' as [Tipo de participacion]
-              FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
-              INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
-              INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
-              WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
-                    (A.bidEconomicIssueDate <= @endDate) AND
-                    (A.bidEconomicIssueDate >= @startDate) 
-          
-               UNION
-              
-              SELECT DISTINCT 
-                    UPPER(A.proveedorRut) [Rut Proveedor]
-                    ,B.orgEnterprise [EntCode]
-                    ,B.orgLegalName [Razon Social]
-                    ,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
-              FROM DCCPProcurement.dbo.prcPOCotizacion A
-              INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
-              INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
-              WHERE (C.porSendDate <= @endDate) AND
-              (C.porSendDate >= @startDate)
-      
-              UNION
-          
-              SELECT DISTINCT
-              UPPER(B.orgTaxID) [Rut Proveedor]
-              ,COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI [EntCode]
-              ,B.orgLegalName [Razon Social]
-              ,'Entrega cotización para Compra ágil' as [Tipo de participacion]
-              FROM DCCPCotizacion.dbo.SolicitudCotizacion as SOLI
-              INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
-              INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI =B.orgEnterprise
-              WHERE SOLI.FechaCierre BETWEEN @startDate AND @endDate
-            	AND EstadoId = 2 -- enviada
-            	)
-            	
-            	SELECT DISTINCT
-                  T.[Rut Proveedor]
-                  ,T.EntCode
-                  ,T.[Razon Social]
-                  , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
-                  , @MONTH [Mes Central]
-                  , @YEAR [Anio Central]
-                  , @startDate [Comienzo]
-                  , @endDate [Final]
-            	FROM TEMP T
-            	LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
-                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
-                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
-                ) s on T.EntCode=s.EntCode 
-                     "
-)
-)
 
+descargar_y_guardar_oferentes <- function(wd_path = data_path,...) {
+  require(lubridate)
+  # Verifica si el día actual es igual al quinto día del mes
+  # 
+  
+  details = detalles()
+  
+  
+  if (mday(today()) <= 5) {
+    start <- Sys.time()
+    
+    # Lógica para obtener los inscritos directamente
+    x <- month(today()) - 1
+    y <- year(today())
+    
+    
+
+    ofertan = function(x,y, window) sqlQuery(con2, sprintf(
+      "
+                  
+                  DECLARE @MONTH AS INT;
+                  DECLARE @YEAR AS INT;
+                  
+                  SET @MONTH = %s;
+                  SET @YEAR = %s;
+                    
+                  DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
+                  DECLARE @startDate datetime = dateadd(month,%s, @currentMonth)
+                  , @endDate datetime = dateadd(month, 1, @currentMonth);
+                  
+                  WITH TEMP as(
+              
+                  SELECT DISTINCT
+                        UPPER(C.orgTaxID) [Rut Proveedor]
+                        ,C.orgEnterprise [EntCode]
+                        ,C.orgLegalName [Razon Social]
+                        ,'Oferta en licitaciones (o convenio Marco)' as [Tipo de participacion]
+                  FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
+                  INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
+                  INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
+                  WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
+                        (A.bidEconomicIssueDate <= @endDate) AND
+                        (A.bidEconomicIssueDate >= @startDate) 
+              
+                   UNION
+                  
+                  SELECT DISTINCT 
+                        UPPER(A.proveedorRut) [Rut Proveedor]
+                        ,B.orgEnterprise [EntCode]
+                        ,B.orgLegalName [Razon Social]
+                        ,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
+                  FROM DCCPProcurement.dbo.prcPOCotizacion A
+                  INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
+                  INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
+                  WHERE (C.porSendDate <= @endDate) AND
+                  (C.porSendDate >= @startDate)
+          
+                  UNION
+              
+                  SELECT DISTINCT
+                  UPPER(B.orgTaxID) [Rut Proveedor]
+                  ,COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI [EntCode]
+                  ,B.orgLegalName [Razon Social]
+                  ,'Entrega cotización para Compra ágil' as [Tipo de participacion]
+                  FROM DCCPCotizacion.dbo.SolicitudCotizacion as SOLI
+                  INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
+                  INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI =B.orgEnterprise
+                  WHERE SOLI.FechaCierre BETWEEN @startDate AND @endDate
+                	AND EstadoId = 2 -- enviada
+                	)
+                	
+                	SELECT DISTINCT
+                      T.[Rut Proveedor]
+                      ,T.EntCode
+                      ,T.[Razon Social]
+                      , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+                      , @MONTH [Mes Central]
+                      , @YEAR [Anio Central]
+                      , @startDate [Comienzo]
+                      , @endDate [Final]
+                	FROM TEMP T
+                	LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
+                    FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                    WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                    (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
+                    (year(s.fechacreacion)<= @YEAR)
+                    ) s on T.EntCode=s.EntCode 
+                         ",x,y, window)
+    )
+  
+  oferentes = ofertan(x=x,y=y, window = -12)
+  
+
+  end <- Sys.time()
+  tiempo_transcurrido <- difftime(end, start, units = "mins")
+  
+  resultado <- list(datos = oferentes)
+  
+  print(tiempo_transcurrido)
+  #
+  #Guarda el objeto oferentes en un archivo 
+  #
+  
+  saveRDS(resultado, file = paste0(gsub("-", "", today()),
+                                   gsub(" ","_"," ofertan en algún proceso de compra"),y,".rds"))
+  return(resultado)
+  } else {
+    #
+    #Retorna un mensaje indicando que la función no se ejecutó
+    #
+    mensaje <- "La descarga no se ejecutó porque la fecha actual es superior al quinto día del mes."
+    cat(mesaje, "\n")
+    
+    file = details$files[grep(paste0("ofertan_en_alg"), details$files)][1]
+    # 
+    # Intenta cargar los datos desde el archivo aunque la función no se haya ejecutado
+    # 
+    if (file.exists(file.path(wd_path, file))) {
+      oferentes <- readr::read_rds(file = file.path(wd_path, file))
+      cat("Datos cargados desde el archivo existente.\n")
+      return(list(datos = oferentes))
+    } else {
+      return(mensaje)
+    }
+}
+}
+
+
+ofertan_2023 <- descargar_y_guardar_oferentes(wd_path = data_path)
 
 # start <- Sys.time()
 # ofertan_2023 = lapply(1:((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
@@ -405,7 +447,10 @@ details = detalles()
 
 # Carga de datos históricos==============================
 
-inscritos_ = readr::read_rds(details$files[grep("inscritos", details$files)][1])
+# Llama a la función
+
+inscritos_ <- descargar_y_guardar_inscritos(wd_path = data_path)[[2]]
+
 
 #login_ = readr::read_rds(details$files[grep("logueados", details$files)][1])
 

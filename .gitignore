@@ -5,3 +5,5 @@
 # Ignorar archivos con extensión .log
 *.rds
 *.docx
+presentacion_prueba_files
+renv.lock
