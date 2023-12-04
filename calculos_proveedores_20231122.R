@@ -43,14 +43,9 @@ con3 = RODBC::odbcConnect("dw", uid = "datawarehouse", pwd = "datawarehouse") #D
 # INSCRITOS EN LA PLATAFORMA ÚLTIMO AÑO ===============================================================
 # 
 
+data_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos"
 
-
-
-
-
-
-
-descargar_y_guardar_inscritos <- function(query, variable) {
+descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
   require(lubridate)
   # Verifica si el día actual es igual al quinto día del mes
   # 
@@ -83,14 +78,8 @@ descargar_y_guardar_inscritos <- function(query, variable) {
     x <- month(today()) - 1
     y <- year(today())
     
-    file = details$files[grep(paste0(variable), details$files)][1] 
     
-    # Comprueba si el archivo ya existe y lo carga
-    if (file.exists(paste0(file))) {
-      inscritos <- readRDS(file)
-      cat("Datos cargados desde el archivo existente.\n")
-    } else {
-      inscritos <- function(x,y) {
+      query <- function(x,y,...) {
         sqlQuery(con2, sprintf(
         "
         DECLARE @MONTH AS INT;
@@ -126,12 +115,15 @@ descargar_y_guardar_inscritos <- function(query, variable) {
             AND orgIsTest = 0
         GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
         ",x,y)
-      ))
+      )
       
-      # Guarda el objeto inscritos en un archivo
-      saveRDS(inscritos, file = "inscritos_resultado.rds")
     }
     
+      inscritos = query(x=x, y=y)
+      
+      # Guarda el objeto inscritos en un archivo
+      saveRDS(inscritos, file = paste0(gsub("-", "", today()),
+                                       gsub(" ","_"," inscritos históricos en la plataforma.rds")))
     end <- Sys.time()
     tiempo_transcurrido <- difftime(end, start, units = "mins")
     
@@ -141,28 +133,30 @@ descargar_y_guardar_inscritos <- function(query, variable) {
                   gsub(" ","_"," inscritos históricos en la plataforma.rds")))
     
     return(resultado)
-  } else {
+  
+    } else {
     # Retorna un mensaje indicando que la función no se ejecutó
     mensaje <- "La descarga no se ejecutó porque la fecha actual es superior al quinto día del mes."
     cat(mensaje, "\n")
     
-    file <- file 
+    file = details$files[grep(paste0("inscritos_históricos"), details$files)][1]  
     
     # Intenta cargar los datos desde el archivo aunque la función no se haya ejecutado
-    if (file.exists(file)) {
-      inscritos <- readr::read_rds(file = file)
+    if (file.exists(file.path(wd_path, file))) {
+      inscritos <- readr::read_rds(file = file.path(wd_path, file))
       cat("Datos cargados desde el archivo existente.\n")
       return(list(datos = inscritos))
     } else {
       return(mensaje)
     }
   }
-}
+  }
+
 
 
 # Llama a la función
 
-inscritos_ <- descargar_y_guardar_inscritos(query = query_ins,variable = "inscritos")
+inscritos_ <- descargar_y_guardar_inscritos(wd_path = data_path)
 
 
 #
