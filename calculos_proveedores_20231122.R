@@ -45,6 +45,7 @@ con3 = RODBC::odbcConnect("dw", uid = "datawarehouse", pwd = "datawarehouse") #D
 
 data_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos"
 
+
 #Detalles sobre los archivos guardados en el directorio de trabajo 
 #
 
@@ -62,6 +63,7 @@ detalles = function(path = wd_path, pattern = "*.rds"){
   
   return(details)
 }
+
 
 descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
   require(lubridate)
@@ -115,13 +117,19 @@ descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
             AND orgIsTest = 0
         GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
         ",x,y)
+
         )
         }
       
     
     
+      
       inscritos = query(x=x, y=y)
       
+      # Guarda el objeto inscritos en un archivo
+      saveRDS(inscritos, file = paste0(gsub("-", "", today()),
+                                       gsub(" ","_"," inscritos históricos en la plataforma.rds")))
+
     end <- Sys.time()
     tiempo_transcurrido <- difftime(end, start, units = "mins")
     
@@ -148,6 +156,13 @@ descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
     }
   }
   }
+
+
+
+# Llama a la función
+
+inscritos_ <- descargar_y_guardar_inscritos(wd_path = data_path)
+>>>>>>> 7e901a3256e2e84c1dc930861bf50e6015f0bc99
 
 
 #
