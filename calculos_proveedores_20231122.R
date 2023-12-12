@@ -121,19 +121,13 @@ descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
         )
         }
       
-    
-    
       
       inscritos = query(x=x, y=y)
       
-      # Guarda el objeto inscritos en un archivo
-      saveRDS(inscritos, file = paste0(gsub("-", "", today()),
-                                       gsub(" ","_"," inscritos históricos en la plataforma.rds")))
-
     end <- Sys.time()
     tiempo_transcurrido <- difftime(end, start, units = "mins")
     
-    resultado <- list(datos = inscritos)
+    resultado <- inscritos
     saveRDS(resultado, file = paste0(gsub("-", "", today()),
                    gsub(" ","_"," inscritos históricos en la plataforma_"),y,".rds"))
     
@@ -141,8 +135,12 @@ descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
   
     } else {
     # Retorna un mensaje indicando que la función no se ejecutó
-    mensaje <- "La descarga no se ejecutó porque la fecha actual es superior al quinto día del mes."
-    cat(mensaje, "\n")
+    mensaje <- ""
+    cat("=======================================================================", "\n")
+    cat("La descarga no se llevó a cabo porque la fecha actual es superior al \n quinto día del mes.", "\n")
+    cat("=======================================================================", "\n")
+    cat("Se procede a verificar si existe una versión actualizada en el directorio", "\n")
+    cat("=======================================================================", "\n")
     
     file = details$files[grep(paste0("inscritos_históricos"), details$files)][1]  
     
@@ -150,19 +148,16 @@ descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
     if (file.exists(file.path(wd_path, file))) {
       inscritos <- readr::read_rds(file = file.path(wd_path, file))
       cat("Datos cargados desde el archivo existente.\n")
-      return(list(datos = inscritos))
+      cat("=======================================================================", "\n")
+      cat("Tamaño del archivo: ", round(file.info(file.path(wd_path, file))[,1]/1e5,2), " Megabytes", "\n")
+      cat("Fecha de creación: ", file.info(file.path(wd_path, file))[,"ctime"], "\n")
+      return(inscritos)
     } else {
       return(mensaje)
     }
   }
   }
 
-
-
-# Llama a la función
-
-inscritos_ <- descargar_y_guardar_inscritos(wd_path = data_path)
->>>>>>> 7e901a3256e2e84c1dc930861bf50e6015f0bc99
 
 
 #
@@ -252,24 +247,13 @@ login = function(x,y, window = -24) sqlQuery(con2, paste0(
 # OFERENTES DIFERENTES PROCEDIMIENTOS DE COMPRA ====================================
 
 
-descargar_y_guardar_oferentes <- function(wd_path = data_path,...) {
+descargar_y_guardar_oferentes <- function(wd_path = data_path, years, window = -12) {
   require(lubridate)
-  # Verifica si el día actual es igual al quinto día del mes
-  # 
   
-  details = detalles()
+  details <- detalles()
   
-  
-  if (mday(today()) <= 5) {
-    start <- Sys.time()
-    
-    # Lógica para obtener los inscritos directamente
-    x <- month(today()) - 1
-    y <- year(today())
-    
-    
-
-    ofertan = function(x,y, window) sqlQuery(con2, sprintf(
+  ofertan <- function(x, y, window) {
+    sqlQuery(con2, sprintf(
       "
                   
                   DECLARE @MONTH AS INT;
@@ -296,7 +280,7 @@ descargar_y_guardar_oferentes <- function(wd_path = data_path,...) {
                         (A.bidEconomicIssueDate <= @endDate) AND
                         (A.bidEconomicIssueDate >= @startDate) 
               
-                   UNION
+                  UNION
                   
                   SELECT DISTINCT 
                         UPPER(A.proveedorRut) [Rut Proveedor]
@@ -340,60 +324,65 @@ descargar_y_guardar_oferentes <- function(wd_path = data_path,...) {
                     (year(s.fechacreacion)<= @YEAR)
                     ) s on T.EntCode=s.EntCode 
                          ",x,y, window)
-    )
+    ) 
+  }
   
-  oferentes = ofertan(x=x,y=y, window = -12)
-  
-
-  end <- Sys.time()
-  tiempo_transcurrido <- difftime(end, start, units = "mins")
-  
-  resultado <- list(datos = oferentes)
-  
-  print(tiempo_transcurrido)
-  #
-  #Guarda el objeto oferentes en un archivo 
-  #
-  
-  saveRDS(resultado, file = paste0(gsub("-", "", today()),
-                                   gsub(" ","_"," ofertan en algún proceso de compra"),y,".rds"))
-  return(resultado)
-  } else {
-    #
-    #Retorna un mensaje indicando que la función no se ejecutó
-    #
-    mensaje <- "La descarga no se ejecutó porque la fecha actual es superior al quinto día del mes."
-    cat(mesaje, "\n")
+  descargar_guardar <- function(x, y) {
+    oferentes <- ofertan(x = x, y = y, window = window)
     
-    file = details$files[grep(paste0("ofertan_en_alg"), details$files)][1]
-    # 
-    # Intenta cargar los datos desde el archivo aunque la función no se haya ejecutado
-    # 
-    if (file.exists(file.path(wd_path, file))) {
-      oferentes <- readr::read_rds(file = file.path(wd_path, file))
-      cat("Datos cargados desde el archivo existente.\n")
-      return(list(datos = oferentes))
+    # Guarda el objeto oferentes en un archivo
+    saveRDS(oferentes, file = paste0(gsub("-", "", today()), gsub(" ", "_", "ofertan_en_algún_proceso_de_compra"), y, ".rds"))
+    
+    return(oferentes)
+  }
+  
+  mensaje <- ""
+  
+  if (length(years) == 0) {
+    mensaje <- "La lista de años está vacía."
+    return(mensaje)
+  }
+  
+  ofertan_total <- data.table::data.table()
+  
+  for (year in years) {
+    if (mday(today()) <= 5 || year == year(today())) {
+      start <- Sys.time()
+      x <- month(today()) - 1
+      y <- year
+      
+      oferentes <- descargar_guardar(x, y)
+      ofertan_total <- rbind(ofertan_total, oferentes)
+      
+      end <- Sys.time()
+      tiempo_transcurrido <- difftime(end, start, units = "mins")
+      
+      cat("Descarga para el año", year, "completada en", tiempo_transcurrido, "minutos.", "\n")
     } else {
-      return(mensaje)
+      file <- details$files[grep(paste0("ofertan_en_alg"), details$files)][1]
+      
+      if (file.exists(file.path(wd_path, file))) {
+        oferentes <- readr::read_rds(file = file.path(wd_path, file))
+        cat("Datos cargados desde el archivo existente para el año", year, "\n")
+        ofertan_total <- rbind(ofertan_total, oferentes)
+      } else {
+        mensaje <- paste("No se encontró un archivo existente para el año", year)
+        cat(mensaje, "\n")
+      }
     }
+  }
+  
+  if (nrow(ofertan_total) == 0) {
+    return(mensaje)
+  } else {
+    return(ofertan_total)
+  }
 }
-}
 
+# Uso de la función
+years <- c(2022, 2023)
+ofertan_total <- descargar_y_guardar_oferentes(wd_path = data_path, years = years)
 
-ofertan_2023 <- descargar_y_guardar_oferentes(wd_path = data_path)
-
-# start <- Sys.time()
-# ofertan_2023 = lapply(1:((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
-#   data.table::rbindlist()
-# ofertan_2022 = lapply(1:12, function(x) ofertan(x, 2022)) %>%
-#   data.table::rbindlist()
-# ofert = rbind(ofertan_2022
-#               ,ofertan_2023)
-# end <- Sys.time()
-# difftime(end, start, units="mins")
-# 
-# #
-# saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
 
 
 # PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA 
@@ -464,12 +453,32 @@ details = detalles()
 
 # Llama a la función
 
-inscritos_ <- descargar_y_guardar_inscritos(wd_path = data_path)[[2]]
+inscritos_ <- descargar_y_guardar_inscritos(wd_path = data_path)
 
 
 #login_ = readr::read_rds(details$files[grep("logueados", details$files)][1])
 
-ofertan_ = readr::read_rds(details$files[grep("ofertan", details$files)][1])
+# start <- Sys.time()
+# ofertan_2023 = lapply(1:((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
+#   data.table::rbindlist()
+# ofertan_2022 = lapply(1:12, function(x) ofertan(x, 2022)) %>%
+#   data.table::rbindlist()
+# ofert = rbind(ofertan_2022
+#               ,ofertan_2023)
+# end <- Sys.time()
+# difftime(end, start, units="mins")
+# 
+# #
+# saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
+
+
+ofertan_2022 <- lapply(1:12, function(x) descargar_y_guardar_oferentes(wd_path = data_path, x = x, y = 2022)) %>% 
+  data.table::rbindlist()
+
+ofertan_2023 <- lapply(1:11, function(x) descargar_y_guardar_oferentes(wd_path = data_path, x = x, y = 2023)) %>% 
+  data.table::rbindlist()
+
+ofertan_ = rbind(ofertan_2022, ofertan_2023)
 
 adjudican_ = readr::read_rds(file = details$files[grep("reciben", details$files)][1])
 
