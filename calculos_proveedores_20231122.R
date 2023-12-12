@@ -247,14 +247,37 @@ login = function(x,y, window = -24) sqlQuery(con2, paste0(
 # OFERENTES DIFERENTES PROCEDIMIENTOS DE COMPRA ====================================
 
 
-descargar_y_guardar_oferentes <- function(wd_path = data_path, years, window = -12) {
+consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoConsulta, x, y) {
+  
+  if (length(years) == 0 || !tipoConsulta %in% c('ofertan', 'adjudican')) {
+    mensaje <- "Parámetros inválidos. Asegúrate de proporcionar años y/o tipo de consulta válidos."
+    return(mensaje)
+  }
+  
+  
   require(lubridate)
   
-  details <- detalles()
+  detalles = function(path = wd_path, pattern = "*.rds"){
+    require(dplyr)
+    
+    details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
+    
+    details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
+      filter(isdir==FALSE)
+    
+    details$files = rownames(details)
+    
+    rownames(details) = NULL
+    
+    return(details)
+  }
   
-  ofertan <- function(x, y, window) {
-    sqlQuery(con2, sprintf(
-      "
+  details = detalles()
+  
+  ejecutarConsulta <- switch (tipoConsulta,
+                  ofertan <- function(x, y, window = -12) {
+                    sqlQuery(con2, sprintf(
+                                  "
                   
                   DECLARE @MONTH AS INT;
                   DECLARE @YEAR AS INT;
@@ -324,108 +347,115 @@ descargar_y_guardar_oferentes <- function(wd_path = data_path, years, window = -
                     (year(s.fechacreacion)<= @YEAR)
                     ) s on T.EntCode=s.EntCode 
                          ",x,y, window)
-    ) 
-  }
+                                ) 
+                              },
+                  adjudican = function(x,y,window = -12){
+                    sqlQuery(con2, sprintf("
+                  DECLARE @YEAR AS INT;
+                  DECLARE @MONTH AS INT;
+                  
+                  SET @YEAR = %s;
+                  SET @MONTH = %s;
+                  
+                  DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
+                  DECLARE @startDate datetime = dateadd(month,%s, @currentMonth)
+                  , @endDate datetime = dateadd(month, 1, @currentMonth);
+                  
+                  /*Reciben una orden de compra*/
+                    
+                    SELECT DISTINCT 
+                    UPPER(O.orgTaxID)  [Rut Proveedor]
+                    , O.orgEnterprise [EntCode]
+                    , C.entName [Razon Social]
+                    ,(CASE S.TipoSello WHEN 3 THEN 1 ELSE 0 END) [Sello Mujer]
+                    , @MONTH [Mes Central]
+                    , @YEAR [Anio Central]
+                    , @startDate [Comienzo]
+                    , @endDate [Final]
+                  
+                  FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
+                  INNER JOIN DCCPPlatform.dbo.gblOrganization O with(nolock) ON A.porSellerOrganization = O.orgCode
+                  INNER JOIN DCCPPlatform.dbo.gblEnterprise C with(nolock) ON O.orgEnterprise = C.entCode
+                  LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
+                            FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                            WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                            (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
+                            (year(s.fechacreacion)<= @YEAR)
+                            ) s on C.EntCode collate Modern_Spanish_CI_AI =s.EntCode
+                  WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
+                    (A.porSendDate < @endDate) AND
+                  (A.porSendDate >= @startDate)
+                  ",x,y,window)
+                    )
+                    }
+                  )
+  
   
   descargar_guardar <- function(x, y) {
-    oferentes <- ofertan(x = x, y = y, window = window)
     
-    # Guarda el objeto oferentes en un archivo
-    saveRDS(oferentes, file = paste0(gsub("-", "", today()), gsub(" ", "_", "ofertan_en_algún_proceso_de_compra"), y, ".rds"))
+    data <- ejecutarConsulta(x = x, y = y, window = window)
     
-    return(oferentes)
+    tipoConsulta <- switch(tipoConsulta,
+                           ofertan = "ofertan",
+                           adjudican = "adjudican",
+                           "otro")
+    
+    if (tipoConsulta == "otro") {
+      cat("Tipo de consulta no válido. Por favor, elige 'ofertan' o 'adjudican'.\n")
+      return(NULL)
+    }
+    
+    # Guarda el objeto data en un archivo con nombre diferente según el tipo de consulta
+    saveRDS(data, file = paste0(gsub("-", "", today()), gsub(" ", "_", tipoConsulta), " en algún procedimiento de compra", y, ".rds"))
+    
+    return(data)
   }
+  
   
   mensaje <- ""
   
-  if (length(years) == 0) {
-    mensaje <- "La lista de años está vacía."
-    return(mensaje)
-  }
-  
-  ofertan_total <- data.table::data.table()
+  total <- data.table::data.table()
   
   for (year in years) {
-    if (mday(today()) <= 5 || year == year(today())) {
+    if (year == year(today())) {
       start <- Sys.time()
       x <- month(today()) - 1
       y <- year
       
-      oferentes <- descargar_guardar(x, y)
-      ofertan_total <- rbind(ofertan_total, oferentes)
+      data <- descargar_guardar(x, y)
+      total <- rbind(total, data)
+      
+      end <- Sys.time()
+      tiempo_transcurrido <- difftime(end, start, units = "mins")
+      
+    } else {
+      start <- Sys.time()
+      y <- year
+      
+      data <- descargar_guardar(x, y)
+      total <- rbind(total, data)
       
       end <- Sys.time()
       tiempo_transcurrido <- difftime(end, start, units = "mins")
       
       cat("Descarga para el año", year, "completada en", tiempo_transcurrido, "minutos.", "\n")
-    } else {
-      file <- details$files[grep(paste0("ofertan_en_alg"), details$files)][1]
-      
-      if (file.exists(file.path(wd_path, file))) {
-        oferentes <- readr::read_rds(file = file.path(wd_path, file))
-        cat("Datos cargados desde el archivo existente para el año", year, "\n")
-        ofertan_total <- rbind(ofertan_total, oferentes)
-      } else {
-        mensaje <- paste("No se encontró un archivo existente para el año", year)
-        cat(mensaje, "\n")
       }
     }
   }
   
-  if (nrow(ofertan_total) == 0) {
-    return(mensaje)
-  } else {
-    return(ofertan_total)
-  }
-}
+
 
 # Uso de la función
 years <- c(2022, 2023)
-ofertan_total <- descargar_y_guardar_oferentes(wd_path = data_path, years = years)
+ofertan_total <- consultar_y_guardar(wd_path = data_path
+                                     , years = years
+                                     , window = -12
+                                     , tipoConsulta = "ofertan", x = 12)
 
 
 
 # PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA 
 
-adjudican = function(x,y,window = -12) sqlQuery(con2, paste0(
-  "
-      DECLARE @YEAR AS INT;
-      DECLARE @MONTH AS INT;
-      
-      SET @YEAR = ",y,";
-      SET @MONTH = ",x,";
-      
-      DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-      DECLARE @startDate datetime = dateadd(month,",window,", @currentMonth)
-      , @endDate datetime = dateadd(month, 1, @currentMonth);
-      
-      /*Reciben una orden de compra*/
-        
-        SELECT DISTINCT 
-        UPPER(O.orgTaxID)  [Rut Proveedor]
-        , O.orgEnterprise [EntCode]
-        , C.entName [Razon Social]
-        ,(CASE S.TipoSello WHEN 3 THEN 1 ELSE 0 END) [Sello Mujer]
-        , @MONTH [Mes Central]
-        , @YEAR [Anio Central]
-        , @startDate [Comienzo]
-        , @endDate [Final]
-      
-      FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
-      INNER JOIN DCCPPlatform.dbo.gblOrganization O with(nolock) ON A.porSellerOrganization = O.orgCode
-      INNER JOIN DCCPPlatform.dbo.gblEnterprise C with(nolock) ON O.orgEnterprise = C.entCode
-      LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
-                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
-                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
-                ) s on C.EntCode collate Modern_Spanish_CI_AI =s.EntCode
-      WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
-        (A.porSendDate < @endDate) AND
-      (A.porSendDate >= @startDate)
-
-")
-)
 
 
 # start <- Sys.time()
