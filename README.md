@@ -55,13 +55,14 @@ roles de género para promover una sociedad más equitativa.
 
 ## Contexto: Empresas lideradas por mujeres según Monto transado y órdenes de compra
 
-![](README_files/figure-gfm/primer-1.png)<!-- --> Este gráfico muestra
-que aunque no hay variaciones importantes entre ambos períodos entre
-cantidad de órdenes de compra y montos transados, sí se puede apreciar
-una leve mejora en términos de participación en los montos pasando de un
-17% en 2022 para las mujeres a un 19,7%, sobre todo si se tiene en
-cuenta que a pesar de que el año 2023 no ha concluido, se aprecia un
-total transado muy similar al año anterior.
+![](README_files/figure-gfm/primer-1.png)<!-- -->
+
+Este gráfico muestra que aunque no hay variaciones importantes entre
+ambos períodos entre cantidad de órdenes de compra y montos transados,
+sí se puede apreciar una leve mejora en términos de participación en los
+montos pasando de un 17% en 2022 para las mujeres a un 19,7%, sobre todo
+si se tiene en cuenta que a pesar de que el año 2023 no ha concluido, se
+aprecia un total transado muy similar al año anterior.
 
 ## Monto y cantidad de órdenes de compra según procedimiento de compra
 
@@ -77,104 +78,29 @@ bien construida. Revisar archivo ‘indicadores_complementarios_20231213’
 
 ## Instituciones según importancia de empresas lideradas por mujeres
 
-``` r
-q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds") %>% 
-  setDT() %>% 
-  data.table::dcast(formula = NombreInstitucion ~ Sello,
-                    value.var = c("Monto anual USD", "Cantidad OC")) %>% 
-  arrange(desc(`Monto anual USD_Mujeres`)) %>% 
-  mutate(total_oc = `Cantidad OC_Hombres`+`Cantidad OC_Mujeres`,
-         perc_muj=`Cantidad OC_Mujeres`/total_oc,
-         total_usd = `Monto anual USD_Mujeres`+`Monto anual USD_Hombres`,
-         perc_usd = `Monto anual USD_Mujeres`/total_usd)
-  
-
-
-(
-  oc_perc_plot = ggplot(q_2, aes(x = perc_muj, y = `perc_usd`, size = total_usd)) +
-    geom_point() +
-    geom_vline(xintercept = mean(q_2$perc_muj,na.rm = TRUE), linetype = "dashed", color = "blue", linewidth = 1) +
-    geom_hline(yintercept = mean(q_2$perc_usd,na.rm = TRUE), linetype = "dashed", color = "red", linewidth = 1) +
-    labs(title = "Participación de las mujeres en OC y Montos",
-         x = "Porcentaje OC's",
-         y = "porcentaje Monto OC's",
-         size = "Monto OC's") +
-    theme_minimal()
-)
-```
-
 ![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+
+Frente al hecho de que nuestro indicador puede arrojar valores no
+*convencionales* cuando una institución emite pocas órdenes de compra,
+es que decidimos realizar un zoom a aquellas instituciones en que
+podemos observar que del total de órdenes de compra, el porcentaje
+asignado a empresas lideradas por mujeres es mayor que la media y
+asimismo, aquellas en que el porcentaje asignado en términos de montos
+es superior a la media. Este criterio nos permitió identificar aquellas
+empresas que pertenecen al cuadrante 1.
 
 ## Los principales compradores del primer cuadrante para las empresas con Sello Mujer
 
-``` r
-cuad_1 = q_2 %>% 
-  mutate(media_x=mean(perc_muj,na.rm = TRUE),
-         media_y = mean(perc_usd,na.rm = TRUE)) %>% 
-  filter(perc_muj> media_x & perc_usd>media_y) %>%
-  arrange(desc(`Monto anual USD_Mujeres`)) %>% 
-  mutate(monto_mujeres = `Monto anual USD_Mujeres`)
-
-cuad_1_long <- tidyr::pivot_longer(cuad_1 %>% 
-  arrange(desc(`Monto anual USD_Mujeres`)), cols = c(`Monto anual USD_Hombres`, `Monto anual USD_Mujeres`), names_to = "Genero", values_to = "Monto") %>% 
-  arrange(desc(monto_mujeres))
-
-
-
-# Define los colores para "Hombres" y "Mujeres"
-colores <- c("Monto anual USD_Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Monto anual USD_Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
-
-
-# Crear el gráfico apilado
-cuad_plot_1 <- ggplot(cuad_1_long[1:20,], aes(x = reorder(NombreInstitucion, monto_mujeres), y = Monto, fill = Genero)) +
-  geom_bar(stat = "identity", position = "dodge", color = "black") +
-    scale_fill_manual(values = colores)+
-  labs(title = "Monto transado por Institución", y = "Cantidad")+
-  geom_text(data = cuad_1_long[1:20, ],
-            aes(label = scales::comma(round(Monto)), y = Monto),
-            position = position_dodge(width = 1),  # Ancho de la posición dodge
-            vjust = 0.5)+
-  theme_minimal()+
-  coord_flip()+
-  labs(x = "Instituciones", y = "Monto en millones de dólares")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
-    theme(legend.position = "none")
-
-cuad_1 = q_2 %>% 
-  mutate(media_x=mean(perc_muj,na.rm = TRUE),
-         media_y = mean(perc_usd,na.rm = TRUE)) %>% 
-  filter(perc_muj> media_x & perc_usd>media_y) %>% 
-  mutate(cantidad_mujeres = `Cantidad OC_Mujeres`)
-
-cuad_1_long <- tidyr::pivot_longer(cuad_1 %>% 
-  arrange(desc(`Cantidad OC_Mujeres`)), cols = c(`Cantidad OC_Hombres`, `Cantidad OC_Mujeres`), names_to = "Genero", values_to = "OCs") 
-
-colores <- c("Cantidad OC_Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Cantidad OC_Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
-
-
-# Crear el gráfico apilado
-cuad_plot_2 <- ggplot(cuad_1_long[1:20,], aes(x = reorder(NombreInstitucion, cantidad_mujeres), y = OCs, fill = Genero)) +
-  geom_bar(stat = "identity", position = "dodge", color = "black") +
-    scale_fill_manual(values = colores)+
-  labs(title = "Cantidad de órdenes de compra por institución", y = "Cantidad")+
-  geom_text(data = cuad_1_long[1:20, ],
-            aes(label = scales::comma(round(OCs)), y = OCs),
-            position = position_dodge(width = 1),  # Ancho de la posición dodge
-            vjust = 0.5)+
-  theme_minimal()+
-  coord_flip()+
-  labs(x = "Instituciones", y = "Cantidad de órdenes de compra")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
-    theme(legend.position = "none")
-
-
-
-grid.arrange(cuad_plot_1, cuad_plot_2, ncol = 2)
-```
-
 ![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+Posteriormente, procedimos a mostrar un ranking de aquellas
+instituciones pertenecientes al cuadrante 1, en la que identificamos que
+en materia de montos destacan los municipios, mientras que en materia de
+cantidad de órdenes de compra, el ranking parece estar liderada por
+instituciones del sector salud.
+
+Este es un hallazgo interesante en el que se puede profundizar más
+adelante.
 
 ## Cantidad y Tasa de Participación de proveedoras en el sistema
 

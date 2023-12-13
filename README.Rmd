@@ -165,6 +165,8 @@ plot_1_2 = grafico_barras(q_1, y = `Cantidad OC`,
 grid.arrange(plot_1_1, plot_1_2, ncol = 2)
 
 ```
+
+
 Este gráfico muestra que aunque no hay variaciones importantes entre ambos períodos entre cantidad de órdenes de compra y montos transados, sí se puede apreciar una leve mejora en términos de participación en los montos pasando de un 17% en 2022 para las mujeres a un 19,7%, sobre todo si se tiene en cuenta que a pesar de que el año 2023 no ha concluido, se aprecia un total transado muy similar al año anterior. 
 
 ## Monto y cantidad de órdenes de compra según procedimiento de compra
@@ -244,9 +246,13 @@ q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds")
 
 ```
 
+Frente al hecho de que nuestro indicador puede arrojar valores no *convencionales* cuando una institución emite pocas órdenes de compra, es que decidimos realizar un zoom a aquellas instituciones en que podemos observar que del total de órdenes de compra, el porcentaje asignado a empresas lideradas por mujeres es mayor que la media y asimismo, aquellas en que el porcentaje asignado en términos de montos es superior a la media. Este criterio nos permitió identificar aquellas empresas que pertenecen al cuadrante 1. 
+
 ## Los principales compradores del primer cuadrante para las empresas con Sello Mujer
 
-```{r}
+
+```{r, echo = FALSE}
+
 cuad_1 = q_2 %>% 
   mutate(media_x=mean(perc_muj,na.rm = TRUE),
          media_y = mean(perc_usd,na.rm = TRUE)) %>% 
@@ -314,6 +320,10 @@ grid.arrange(cuad_plot_1, cuad_plot_2, ncol = 2)
 
 ```
 
+
+Posteriormente, procedimos a mostrar un ranking de aquellas instituciones pertenecientes al cuadrante 1, en la que identificamos que en materia de montos destacan los municipios, mientras que en materia de cantidad de órdenes de compra, el ranking parece estar liderada por instituciones del sector salud. 
+
+Este es un hallazgo interesante en el que se puede profundizar más adelante. 
 
 ## Cantidad y Tasa de Participación de proveedoras en el sistema
 
