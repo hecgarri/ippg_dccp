@@ -179,100 +179,113 @@ saveRDS(q_3, file = "q3_monto_cantidad_oc_segun_tipo_OC.rds")
 q_3 = readr::read_rds(file = "q3_monto_cantidad_oc_segun_tipo_OC.rds")
 
 
-# q_4 = sqlQuery(con2, "
-#     DECLARE @ANIO as int
-#     DECLARE @FechaIni Datetime;
-#     DECLARE @FechaFin Datetime;
-#     /* Fecha en yyyy-mm-dd*/
-#     SET @FechaIni = CONVERT(DATETIME, '2022-01-01 00:00:00', 102);
-#     SET @FechaFin = CONVERT(DATETIME, '2022-12-31 00:00:00', 102);
-#     SET @ANIO = 2022;
-#   
-#    with temp as(
-#     SELECT DISTINCT cast(C.entCode as nvarchar(50)) AS Transan
-#     /* Selecciona la columna entcode desde la tabla C */
-#     FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
-#     /* with(nolock) previene que otros procesos hayan bloqueado la clave */
-#     /* prcPOHeader: Tabla que almacena la información de las cabeceras de las OC */
-#     INNER JOIN
-#     DCCPPlatform.dbo.gblOrganization B with(nolock) ON A.porSellerOrganization = B.orgCode
-#     /*gb*/
-#     INNER JOIN
-#     DCCPPlatform.dbo.gblEnterprise C with(nolock) ON B.orgEnterprise = C.entCode
-#     WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
-#     (A.porSendDate < @FechaFin) AND
-#     (A.porSendDate >= @FechaIni)
-#   
-#     UNION
-#   
-#     SELECT DISTINCT cast(C.orgEnterprise as nvarchar(50)) as Transan
-#     FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) /* Busca empresas que hayan ofertado*/
-#     INNER JOIN
-#     DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
-#     /* Tabla de licitaciones*/
-#     INNER JOIN
-#     DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
-#     WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
-#     (A.bidEconomicIssueDate < @FechaFin) AND
-#     (A.bidEconomicIssueDate >= @FechaIni)
-#   
-#     UNION
-#   
-#     SELECT DISTINCT cast(B.orgEnterprise as nvarchar(50)) AS Transan
-#     FROM DCCPProcurement.dbo.prcPOCotizacion A
-#     INNER JOIN DCCPPlatform.dbo.gblOrganization B ON
-#     A.proveedorRut=B.orgTaxID
-#     INNER JOIN
-#     DCCPProcurement.dbo.prcPOHeader C ON
-#     A.porId = C.porID
-#     WHERE (C.porSendDate < @FechaFin) AND
-#     (C.porSendDate >= @FechaIni)
-#   
-#   
-#     UNION
-#     /* MÁS LOS RUT NO REGISTRADOS EN MERCADO PÚBLICO Y QUE SON DEL PERÍODO DE REFERENCIA */
-#   
-#     SELECT DISTINCT  cast(A.proveedorRut as nvarchar(50)) as Transan
-#     FROM DCCPProcurement.dbo.prcPOCotizacion A
-#     INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON
-#     A.porId = C.porID
-#     WHERE A.proveedorRut NOT IN (
-#       SELECT
-#       DISTINCT A.proveedorRut
-#       FROM [DCCPProcurement].[dbo].[prcPOCotizacion] A
-#       INNER  JOIN DCCPPlatform..gblOrganization B ON
-#       A.proveedorRut=B.orgTaxID) AND
-#     (C.porSendDate < @FechaFin) AND
-#     (C.porSendDate >= @FechaIni)
-#   )
-#   SELECT 
-#   s.TipoSello
-#   , COUNT(DISTINCT t.Transan) [Proveedores]
-#   
-#   from temp t
-#   LEFT JOIN (SELECT DISTINCT 
-#       s.entcode as Transan
-#       ,s.TipoSello 
-#       FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-#       WHERE
-#       (s.[TipoSello] = 3 and s.persona = 1) or  -- persona natural
-#       (s.[TipoSello] = 3 and s.persona = 2
-#       and year(s.FechaCaducidad) >= @ANIO
-#       and year(s.fechacreacion) <= @ANIO)    -- persona juridica
-#       ) s on s.Transan collate Modern_Spanish_CI_AI = t.Transan
-#   GROUP BY s.TipoSello
-# 
-#                       "
-# )
-# 
-# q_4 = q_4 %>%
-#   mutate(TipoSello = ifelse(!is.na(TipoSello),"Mujeres", "Hombres")) %>%
-#   ungroup() %>%
-#   mutate(total = sum(Proveedores),
-#          prop = (Proveedores/total)*100) %>%
-#   select(-total)
-# 
-# saveRDS(q_4, file = "sello_proveedores.rds")
+q_4 = function(x,y, window){
+  sqlQuery(con2, sprintf("
+                             
+   DECLARE @MONTH AS INT;          
+              DECLARE @ANIO AS INT;
+              
+              SET @MONTH = %s;
+              SET @ANIO = %s;
+              
+              DECLARE @CURRENTMONTH datetime = datetimefromparts(@ANIO, @MONTH,1,0,0,0,0);
+              DECLARE @startDate datetime = dateadd(month,%s, @CURRENTMONTH)
+                , @endDate datetime = dateadd(month,1,@currentMonth);
+   
+   
+    DECLARE @ANIO as int
+    DECLARE @FechaIni Datetime;
+    DECLARE @FechaFin Datetime;
+    /* Fecha en yyyy-mm-dd*/
+    SET @FechaIni = CONVERT(DATETIME, '2022-01-01 00:00:00', 102);
+    SET @FechaFin = CONVERT(DATETIME, '2022-12-31 00:00:00', 102);
+    SET @ANIO = 2022;
+
+   with temp as(
+    SELECT DISTINCT cast(C.entCode as nvarchar(50)) AS Transan
+    /* Selecciona la columna entcode desde la tabla C */
+    FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
+    /* with(nolock) previene que otros procesos hayan bloqueado la clave */
+    /* prcPOHeader: Tabla que almacena la información de las cabeceras de las OC */
+    INNER JOIN
+    DCCPPlatform.dbo.gblOrganization B with(nolock) ON A.porSellerOrganization = B.orgCode
+    /*gb*/
+    INNER JOIN
+    DCCPPlatform.dbo.gblEnterprise C with(nolock) ON B.orgEnterprise = C.entCode
+    WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
+    (A.porSendDate < @FechaFin) AND
+    (A.porSendDate >= @FechaIni)
+
+    UNION
+
+    SELECT DISTINCT cast(C.orgEnterprise as nvarchar(50)) as Transan
+    FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) /* Busca empresas que hayan ofertado*/
+    INNER JOIN
+    DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
+    /* Tabla de licitaciones*/
+    INNER JOIN
+    DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
+    WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
+    (A.bidEconomicIssueDate < @FechaFin) AND
+    (A.bidEconomicIssueDate >= @FechaIni)
+
+    UNION
+
+    SELECT DISTINCT cast(B.orgEnterprise as nvarchar(50)) AS Transan
+    FROM DCCPProcurement.dbo.prcPOCotizacion A
+    INNER JOIN DCCPPlatform.dbo.gblOrganization B ON
+    A.proveedorRut=B.orgTaxID
+    INNER JOIN
+    DCCPProcurement.dbo.prcPOHeader C ON
+    A.porId = C.porID
+    WHERE (C.porSendDate < @FechaFin) AND
+    (C.porSendDate >= @FechaIni)
+
+
+    UNION
+    /* MÁS LOS RUT NO REGISTRADOS EN MERCADO PÚBLICO Y QUE SON DEL PERÍODO DE REFERENCIA */
+
+    SELECT DISTINCT  cast(A.proveedorRut as nvarchar(50)) as Transan
+    FROM DCCPProcurement.dbo.prcPOCotizacion A
+    INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON
+    A.porId = C.porID
+    WHERE A.proveedorRut NOT IN (
+      SELECT
+      DISTINCT A.proveedorRut
+      FROM [DCCPProcurement].[dbo].[prcPOCotizacion] A
+      INNER  JOIN DCCPPlatform..gblOrganization B ON
+      A.proveedorRut=B.orgTaxID) AND
+    (C.porSendDate < @FechaFin) AND
+    (C.porSendDate >= @FechaIni)
+  )
+  SELECT
+  s.TipoSello
+  , COUNT(DISTINCT t.Transan) [Proveedores]
+
+  from temp t
+  LEFT JOIN (SELECT DISTINCT
+      s.entcode as Transan
+      ,s.TipoSello
+      FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+      WHERE
+      (s.[TipoSello] = 3 and s.persona = 1) or  -- persona natural
+      (s.[TipoSello] = 3 and s.persona = 2
+      and year(s.FechaCaducidad) >= @ANIO
+      and year(s.fechacreacion) <= @ANIO)    -- persona juridica
+      ) s on s.Transan collate Modern_Spanish_CI_AI = t.Transan
+  GROUP BY s.TipoSello
+
+                      "
+))}
+
+q_4 = q_4 %>%
+  mutate(TipoSello = ifelse(!is.na(TipoSello),"Mujeres", "Hombres")) %>%
+  ungroup() %>%
+  mutate(total = sum(Proveedores),
+         prop = (Proveedores/total)*100) %>%
+  select(-total)
+
+saveRDS(q_4, file = "sello_proveedores.rds")
 
 
 q_4 = readr::read_rds(file = "sello_proveedores.rds")
