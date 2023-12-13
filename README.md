@@ -2,9 +2,7 @@ Cuaderno de investigación: Índice de Participación con Perspectiva de
 Género
 ================
 
-## Cuaderno de investigación:
-
-Un cuaderno de investigación, también conocido como cuaderno de
+Un **cuaderno de investigación**, también conocido como cuaderno de
 laboratorio o cuaderno de campo, es un documento utilizado por
 investigadores para registrar de manera sistemática y detallada todas
 las etapas y aspectos de un proyecto de investigación. Este cuaderno
@@ -13,6 +11,11 @@ resultados, análisis y cualquier otro dato relevante asociado con la
 investigación.
 
 ## ChileCompra
+
+<span style="color: red;"> Estos bullets se usaron para la presentación
+realizada con funcionarias del ministerio de hacienda, por tanto, se
+consideró necesario hacer un recordatorio del quehacer del servicio, sin
+embargo, para uso interno es prescindible </span>
 
 - La Dirección de Compras y Contratación Pública, Dirección ChileCompra
   es una entidad clave para más de 1.000 organismos públicos en Chile,
@@ -52,101 +55,25 @@ roles de género para promover una sociedad más equitativa.
 
 ## Contexto: Empresas lideradas por mujeres según Monto transado y órdenes de compra
 
-``` r
-# q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds") %>% 
-#   mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`), "Hombres", "Mujeres")) %>%
-#   rename(Anio = Año) %>%
-#   group_by(Anio, `Sello Mujer`) %>%
-#   mutate(
-#     total_monto = sum(`Monto anual USD`),
-#     total_cantidad = sum(`Cantidad OC`),
-#     perc_monto = `Monto anual USD` / total_monto,
-#     perc_cantidad = `Cantidad OC` / total_cantidad
-#   ) 
+![](README_files/figure-gfm/primer-1.png)<!-- --> Este gráfico muestra
+que aunque no hay variaciones importantes entre ambos períodos entre
+cantidad de órdenes de compra y montos transados, sí se puede apreciar
+una leve mejora en términos de participación en los montos pasando de un
+17% en 2022 para las mujeres a un 19,7%, sobre todo si se tiene en
+cuenta que a pesar de que el año 2023 no ha concluido, se aprecia un
+total transado muy similar al año anterior.
 
+## Monto y cantidad de órdenes de compra según procedimiento de compra
 
-# Define los colores para "Hombres" y "Mujeres"
-colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
+![](README_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
-
-
-file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds"
-
-q_1 = readr::read_rds(file)
-
-grafico_barras <- function(data, y, z, fill,  colores,...){
-  options(scipen = 999)
-  # Calcula el total por género
-  # 
-  data_ <-  data %>% 
-  group_by({{z}}) %>%
-  mutate(total_ = sum({{y}})) %>% 
-    ungroup() %>% 
-    mutate(perc_ = {{y}} /total_)
-    
-    
-  totales_por_genero <- data %>%
-    group_by({{z}}) %>%
-    summarise(total = sum({{y}}))
-  
-   p = ggplot(data_, aes(x = "", y = {{y}}, fill = {{fill}})) +
-    geom_bar(stat = "identity", width = 1, color = "black") +  # Elimina la línea que rodea las tortas
-    #coord_polar("y") +
-    scale_fill_manual(values = colores)+
-    ggtitle("") +
-    theme_minimal() +
-    facet_wrap(enquo(z),...) +  
-     labs(y = "Monto Transado USD (Millones)", x = "Año")+
-    theme(strip.text = element_text(size = 12, face = "bold"))+
-    geom_text(data = data_, aes(label = scales::percent(perc_, accuracy = .1,decimal.mark = ",")), vjust = 1.5) +
-     geom_text(data = totales_por_genero, aes(x="",label = scales::dollar(round(total), big.mark = ".", decimal.mark = ","), y = total), 
-               position = position_stack(vjust = 1.025), color = "black", size = 4, inherit.aes = FALSE)+
-     theme(legend.position = "right")+
-     scale_y_continuous(labels = scales::label_number(scale=1e-6))
-   
-  return(p)
-} 
-
-plot_1_1 = grafico_barras(q_1, y = `Monto anual USD`,
-                       z = Año, fill = `Sello Mujer`, colores = colores, scale = "free")  
-
-
-
-plot_1_2 = grafico_barras(q_1, y = `Cantidad OC`,
-                       z = Año, fill = `Sello Mujer`, colores = colores, scale = "free")+ labs(y = "Cantidad de órdenes de compra", x = "Año")  
-
-
-grid.arrange(plot_1_1, plot_1_2, ncol = 2)
-```
-
-![](README_files/figure-gfm/primer-1.png)<!-- -->
-
-<!-- ## Monto y cantidad de órdenes de compra según procedimiento de compra  -->
-<!-- ```{r, eval=TRUE} -->
-<!-- q_3 = readr::read_rds(file = "q3_monto_cantidad_oc_segun_tipo_OC.rds")  -->
-<!-- # Define los colores para "Hombres" y "Mujeres" -->
-<!-- colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres -->
-<!--              "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres -->
-<!-- plot_3_1 = grafico_barras(data = q_3, y = `Monto anual USD`, -->
-<!--                         z = `Procedimiento`, fill = `Sello Mujer`, -->
-<!--                         colores = colores, scales = "free")   -->
-<!-- plot_3_2 = grafico_barras(data = q_3, y = `Cantidad OC`, -->
-<!--                         z = `Procedimiento`, fill = `Sello Mujer`, -->
-<!--                         colores = colores, scales = "free")   -->
-<!-- grid.arrange(plot_3_1, plot_3_2, ncol = 2) -->
-<!-- # kable( -->
-<!-- #   q_3, -->
-<!-- #   col.names = c("Año", "Sello Mujer", "Tipo de Orden de Compra", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"), -->
-<!-- #   digits = 2, -->
-<!-- #   caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa y tipo de Orden de Compra, 2022-2023" -->
-<!-- #   ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%  -->
-<!-- #   footnote( -->
-<!-- #     general = "Elaboración propia a partir de datos de ChileCompra", -->
-<!-- #     general_title = "Nota:", -->
-<!-- #     footnote_as_chunk = TRUE -->
-<!-- #     ) -->
-<!-- ``` -->
+<span style="color: red;"> Aunque es interesante realizar una apertura
+por procedimiento de compra, este gráfico no refleja adecuadamente la
+realidad pues no puede ser que el % de participación de las empresas
+lideradas por mujeres sea inferior en todos los procedimientos de compra
+en relación con el total. Por lo tanto debo verificar que la query está
+bien construida. Revisar archivo ‘indicadores_complementarios_20231213’
+</span>
 
 ## Instituciones según importancia de empresas lideradas por mujeres
 
@@ -176,7 +103,7 @@ q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds")
 )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
 ## Los principales compradores del primer cuadrante para las empresas con Sello Mujer
 
@@ -247,7 +174,7 @@ cuad_plot_2 <- ggplot(cuad_1_long[1:20,], aes(x = reorder(NombreInstitucion, can
 grid.arrange(cuad_plot_1, cuad_plot_2, ncol = 2)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
 ## Cantidad y Tasa de Participación de proveedoras en el sistema
 
@@ -272,7 +199,7 @@ ggplot(q_4, aes(x = reorder(`Sello Mujer`, -Sello), y = `Sello`, fill = `Sello M
   theme(legend.position = "top")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ``` r
 # kable(
@@ -359,7 +286,7 @@ ind_hist = readr::read_rds(file = "data_index_inst.rds")
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
 
-<img src="README_files/figure-gfm/unnamed-chunk-5-1.png" width="80%" />
+<img src="README_files/figure-gfm/unnamed-chunk-6-1.png" width="80%" />
 
 ## Resultados preliminares
 
@@ -381,7 +308,7 @@ ind_hist = readr::read_rds(file = "20231126_datos_índice_desagregado_por_instit
 )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ## Agenda
 

@@ -68,6 +68,7 @@ q_1 = stats_oc_by_seal(x = 12, y = 2022)
 saveRDS(q_1, file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds")
 
 
+
 q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds")
 
 
@@ -125,8 +126,8 @@ q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds")
 
 q_3 =  sqlQuery(con3,
                     "
-    DECLARE @ANIO AS INT
-                    SET @ANIO = 2023
+    DECLARE @ANIO AS INT;
+    SET @ANIO = 2023;
 
     SELECT 
     --T.year 'Anio',
@@ -152,9 +153,9 @@ q_3 =  sqlQuery(con3,
                     END) AS [Procedimiento]
                     FROM [DM_Transaccional].[dbo].[THOrdenesCompra] OC
                     INNER JOIN DM_Transaccional.dbo.DimProveedor p on p.IDSucursal=oc.IDSucursal
-                    inner join [DM_Transaccional].[dbo].[DimTiempo] T on T.DateKey=OC.IDFechaEnvioOC
-                    inner join [DM_Transaccional].[dbo].[DimComprador] C ON OC.IDUnidaddeCompra=C.IDUnidaddeCompra
-                    inner join [DM_Transaccional].[dbo].[DimInstitucion] I ON C.entCode=I.entCode 
+                    INNER JOIN [DM_Transaccional].[dbo].[DimTiempo] T on T.DateKey=OC.IDFechaEnvioOC
+                    INNER JOIN [DM_Transaccional].[dbo].[DimComprador] C ON OC.IDUnidaddeCompra=C.IDUnidaddeCompra
+                    INNER JOIN [DM_Transaccional].[dbo].[DimInstitucion] I ON C.entCode=I.entCode 
                     
                     LEFT JOIN (select distinct SP.EntCode, SP.Id_Tipo_Sello
                            from  [DM_RegistroProveedores].[dbo].[Sello_Proveedor] SP
