@@ -56,7 +56,6 @@ datos_ind_fil = read_rds(file =details$files[grep("_desagregado", details$files)
 
 ```
 
-
 ## ChileCompra
 
 - La Dirección de Compras y Contratación Pública, Dirección ChileCompra es una entidad clave para más de 1.000 organismos públicos en Chile, facilitando la adquisición de bienes y servicios. A través de su plataforma transaccional, [Mercado Público](https://www.mercadopublico.cl).
