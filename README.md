@@ -1,5 +1,16 @@
-Índice de Participación con Perspectiva de Género
+Cuaderno de investigación: Índice de Participación con Perspectiva de
+Género
 ================
+
+## Cuaderno de investigación:
+
+Un cuaderno de investigación, también conocido como cuaderno de
+laboratorio o cuaderno de campo, es un documento utilizado por
+investigadores para registrar de manera sistemática y detallada todas
+las etapas y aspectos de un proyecto de investigación. Este cuaderno
+sirve como un registro permanente de las observaciones, experimentos,
+resultados, análisis y cualquier otro dato relevante asociado con la
+investigación.
 
 ## ChileCompra
 
