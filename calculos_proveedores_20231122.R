@@ -65,191 +65,12 @@ detalles = function(path = wd_path, pattern = "*.rds"){
 }
 
 
-descargar_y_guardar_inscritos <- function(wd_path = data_path,...) {
-  require(lubridate)
-  # Verifica si el día actual es igual al quinto día del mes
-  # 
+consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta = "ofertan", x, y) {
   
-    details = detalles()
-  
-  
-  if (mday(today()) <= 5) {
-    start <- Sys.time()
-    
-    # Lógica para obtener los inscritos directamente
-    x <- month(today()) - 1
-    y <- year(today())
-    
-    
-      query <- function(x,y,...) {
-        sqlQuery(con2, sprintf(
-        "
-        DECLARE @MONTH AS INT;
-        DECLARE @YEAR AS INT;
-        
-        SET @MONTH = %s;
-        SET @YEAR = %s;
-        
-        
-        DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-        DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
-        , @endDate datetime = dateadd(month, +1, @currentMonth);
-        
-        SELECT DISTINCT
-            UPPER([orgTaxID]) as [Rut Proveedor]
-            ,[orgEnterprise] [EntCode]
-            ,UPPER([orgLegalName]) as [Razon Social]
-            , (CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
-            ,min(cast([orgCreationDate] as date)) [Fecha de creación empresa]
-            , @MONTH [Mes Central]
-            , @YEAR [Anio Central]
-            , @endDate [Final]
-        FROM [DCCPPlatform].[dbo].[gblOrganization] O
-        LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
-                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
-                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
-                ) s on O.orgEnterprise=s.EntCode collate Modern_Spanish_CI_AI
-        WHERE orgCreationDate  <= @endDate 
-            AND orgClass = 1 -- proveedores o proveedoras
-            AND orgIsActive = 1
-            AND orgIsTest = 0
-        GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
-        ",x,y)
-
-        )
-        }
-      
-      
-      inscritos = query(x=x, y=y)
-      
-    end <- Sys.time()
-    tiempo_transcurrido <- difftime(end, start, units = "mins")
-    
-    resultado <- inscritos
-    saveRDS(resultado, file = paste0(gsub("-", "", today()),
-                   gsub(" ","_"," inscritos históricos en la plataforma_"),y,".rds"))
-    
-    return(resultado)
-  
-    } else {
-    # Retorna un mensaje indicando que la función no se ejecutó
-    mensaje <- ""
-    cat("=======================================================================", "\n")
-    cat("La descarga no se llevó a cabo porque la fecha actual es superior al \n quinto día del mes.", "\n")
-    cat("=======================================================================", "\n")
-    cat("Se procede a verificar si existe una versión actualizada en el directorio", "\n")
-    cat("=======================================================================", "\n")
-    
-    file = details$files[grep(paste0("inscritos_históricos"), details$files)][1]  
-    
-    # Intenta cargar los datos desde el archivo aunque la función no se haya ejecutado
-    if (file.exists(file.path(wd_path, file))) {
-      inscritos <- readr::read_rds(file = file.path(wd_path, file))
-      cat("Datos cargados desde el archivo existente.\n")
-      cat("=======================================================================", "\n")
-      cat("Tamaño del archivo: ", round(file.info(file.path(wd_path, file))[,1]/1e5,2), " Megabytes", "\n")
-      cat("Fecha de creación: ", file.info(file.path(wd_path, file))[,"ctime"], "\n")
-      return(inscritos)
-    } else {
-      return(mensaje)
-    }
-  }
-  }
-
-
-
-#
-# LOGUEADOS EN LA PLATAFORMA ÚLTIMO AÑO ===============================================================
-#
-
-
-login = function(x,y, window = -24) sqlQuery(con2, paste0(
-  "
-                DECLARE @YEAR AS INT;
-                DECLARE @MONTH AS INT;
-                
-                SET @YEAR = ",y,";
-                SET @MONTH = ",x,";
-                
-                DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-                DECLARE @startDate datetime = dateadd(month,", window ,", @currentMonth)
-                    , @endDate datetime = dateadd(month, +1, @currentMonth);
-
-                SELECT
-                UPPER([orgTaxID]) as [Rut Proveedor]
-                ,O.orgEnterprise [EntCode]
-                ,UPPER(E.entname) [Razon social]
-                ,(CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
-                ,COUNT(DISTINCT U.usrTaxID) [Usuarios]
-                --, U.usrLastLogin
-			        	, MONTH(U.usrLastLogin) [Mes]
-                , YEAR(U.usrLastLogin) [Anio]
-		            , @MONTH [Mes Central]
-				        , @YEAR [Anio Central]
-				        , @startDate [Comienzo]
-				        , @endDate [Final]
-                
-                FROM  [DCCPPlatform].[dbo].[gblSecUserRole] as UR 
-                INNER JOIN  [DCCPPlatform].[dbo].gblOrganization as O ON UR.uroOrganization      = O.orgCode
-                INNER JOIN  [DCCPPlatform].[dbo].GblUser as U ON UR.uroUser              = U.usrCode
-                LEFT JOIN   [DCCPPlatform].[dbo].gblEnterprise  as E  ON O.orgEnterprise         = E.entcode
-                LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
-                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
-                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
-                ) s on E.entcode=s.EntCode collate Modern_Spanish_CI_AI
-                WHERE  U.usrIsActive       = 1
-                AND O.orgIsActive   = 1
-                AND E.entIsActive   = 1
-                and o.orgistest = 0
-                AND (U.usrEmail NOT LIKE '%ontraloria.cl' OR (U.usrEmail LIKE '%ontraloria.cl' AND E.entCode = '7231'))  -- 7231 Codigo de la Contraloria
-                AND (U.usrEmail NOT LIKE '%ontroloria.cl' OR (U.usrEmail LIKE '%ontroloria.cl' AND E.entCode = '7231'))
-                AND E.entName NOT IN ('MERCADOPUBLICOTEST','MPCOMPRADORTEST_SKY','MPCOMPRADORTEST_SKY2','DCCP-OPERACIONES-PRUEBA COMPRADOR') -- Usuarios de Prueba
-                AND U.usrPosition != ''             -- No consideramos contactos sin usrPosition
-                AND U.usrEmail  != ''        -- No consideramos contactos sin mail
-                AND YEAR(U.usrLastLogin) = @YEAR
-                AND U.usrLastLogin <= @endDate AND U.usrLastLogin >= @startDate
-                AND O.orgClass = 1
-                AND o.orgtaxid not in ('0-0','0.000.000-0','1-9','A.t21-125','yyyyyyyyyy')
-                GROUP BY E.entcode
-                , E.entName
-                , S.TipoSello
-                --, U.usrLastLogin
-                , O.orgTaxId
-                , O.OrgEnterprise
-                , YEAR(U.usrLastLogin)
-                , MONTH(U.usrLastLogin)   
-               "
-))
-
-
-# start <- Sys.time()
-# log_ = lapply((month(today())-1), function(x) login(x, year(today()))) %>%
-#   data.table::rbindlist()
-# end <- Sys.time()
-# difftime(end, start, units="mins")
-# 
-# 
-# saveRDS(log_, file = paste0(gsub("-", "", today()),gsub(" ","_"," logueados en la plataforma 2023.rds")))
-
-# NOTA: AL VOLVER MÁS ANCHA LA VENTANA MÓVIL (ROLLING WINDOW, NO SE ACTULIZAN LOS DATOS
-#                                             , SOSPECHO QUE LO BORRAN COMO HACEN CON EL
-#                                             TEMA DE LAS SESIONES)
-
-# 
-# 
-# 
-
- 
-# OFERENTES DIFERENTES PROCEDIMIENTOS DE COMPRA ====================================
-
-
-consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoConsulta, x, y) {
-  
-  if (length(years) == 0 || !tipoConsulta %in% c('ofertan', 'adjudican')) {
+  if (length(years) == 0 || !tipoConsulta %in% c('ofertan'
+                                                 , 'adjudican'
+                                                 ,'login'
+                                                 ,'inscritos')) {
     mensaje <- "Parámetros inválidos. Asegúrate de proporcionar años y/o tipo de consulta válidos."
     return(mensaje)
   }
@@ -257,25 +78,11 @@ consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoCo
   
   require(lubridate)
   
-  detalles = function(path = wd_path, pattern = "*.rds"){
-    require(dplyr)
-    
-    details = file.info(path = paste0(wd_path), list.files(pattern=pattern))
-    
-    details = details[with(details, order(as.POSIXct(mtime), decreasing = TRUE)), ] %>% 
-      filter(isdir==FALSE)
-    
-    details$files = rownames(details)
-    
-    rownames(details) = NULL
-    
-    return(details)
-  }
-  
-  details = detalles()
+  # Es importante notar que la función switch es sensible al uso del operador de asignación
+  # porque al usar <- en lugar de = arroja un error. OJO 
   
   ejecutarConsulta <- switch (tipoConsulta,
-                  ofertan <- function(x, y, window = -12) {
+                  'ofertan' = function(x, y, window ) {
                     sqlQuery(con2, sprintf(
                                   "
                   
@@ -349,13 +156,14 @@ consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoCo
                          ",x,y, window)
                                 ) 
                               },
-                  adjudican = function(x,y,window = -12){
+                  'adjudican' = function(x,y,window){
                     sqlQuery(con2, sprintf("
-                  DECLARE @YEAR AS INT;
                   DECLARE @MONTH AS INT;
+                  DECLARE @YEAR AS INT;
                   
-                  SET @YEAR = %s;
                   SET @MONTH = %s;
+                  SET @YEAR = %s;
+                  
                   
                   DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
                   DECLARE @startDate datetime = dateadd(month,%s, @currentMonth)
@@ -367,7 +175,7 @@ consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoCo
                     UPPER(O.orgTaxID)  [Rut Proveedor]
                     , O.orgEnterprise [EntCode]
                     , C.entName [Razon Social]
-                    ,(CASE S.TipoSello WHEN 3 THEN 1 ELSE 0 END) [Sello Mujer]
+                    ,(CASE WHEN S.TipoSello=3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
                     , @MONTH [Mes Central]
                     , @YEAR [Anio Central]
                     , @startDate [Comienzo]
@@ -387,36 +195,126 @@ consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoCo
                   (A.porSendDate >= @startDate)
                   ",x,y,window)
                     )
-                    }
+                    },
+                  'inscritos' = function(x,y,window) {
+                    sqlQuery(con2, sprintf(
+                      "
+                  DECLARE @MONTH AS INT;
+                  DECLARE @YEAR AS INT;
+                  
+                  SET @MONTH = %s;
+                  SET @YEAR = %s;
+                  
+                  
+                  DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
+                  DECLARE @startDate datetime = dateadd(month, %s, @currentMonth)
+                  , @endDate datetime = dateadd(month, +1, @currentMonth);
+                  
+                  SELECT DISTINCT
+                      UPPER([orgTaxID]) as [Rut Proveedor]
+                      ,[orgEnterprise] [EntCode]
+                      ,UPPER([orgLegalName]) as [Razon Social]
+                      , (CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+                      ,min(cast([orgCreationDate] as date)) [Fecha de creación empresa]
+                      , @MONTH [Mes Central]
+                      , @YEAR [Anio Central]
+                      , @endDate [Final]
+                  FROM [DCCPPlatform].[dbo].[gblOrganization] O
+                  LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
+                          FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                          WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                          (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
+                          (year(s.fechacreacion)<= @YEAR)
+                          ) s on O.orgEnterprise=s.EntCode collate Modern_Spanish_CI_AI
+                  WHERE orgCreationDate  <= @endDate 
+                      AND orgClass = 1 -- proveedores o proveedoras
+                      AND orgIsActive = 1
+                      AND orgIsTest = 0
+                  GROUP BY UPPER([orgTaxID]),[orgEnterprise],UPPER([orgLegalName]), s.TipoSello
+                  ",x,y, window)
+        
+                    )
+                  },
+                  'login' = function(x,y, window){
+                    sqlQuery(con2, sprintf(
+                      "
+                DECLARE @MONTH AS INT;
+                  DECLARE @YEAR AS INT;
+                  
+                  SET @MONTH = %s;
+                  SET @YEAR = %s;
+                  
+                
+                DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
+                DECLARE @startDate datetime = dateadd(month,%s, @currentMonth)
+                    , @endDate datetime = dateadd(month, +1, @currentMonth);
+
+                SELECT
+                UPPER([orgTaxID]) as [Rut Proveedor]
+                ,O.orgEnterprise [EntCode]
+                ,UPPER(E.entname) [Razon social]
+                ,(CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+                ,COUNT(DISTINCT U.usrTaxID) [Usuarios]
+                --, U.usrLastLogin
+			        	, MONTH(U.usrLastLogin) [Mes]
+                , YEAR(U.usrLastLogin) [Anio]
+		            , @MONTH [Mes Central]
+				        , @YEAR [Anio Central]
+				        , @startDate [Comienzo]
+				        , @endDate [Final]
+                
+                FROM  [DCCPPlatform].[dbo].[gblSecUserRole] as UR 
+                INNER JOIN  [DCCPPlatform].[dbo].gblOrganization as O ON UR.uroOrganization      = O.orgCode
+                INNER JOIN  [DCCPPlatform].[dbo].GblUser as U ON UR.uroUser              = U.usrCode
+                LEFT JOIN   [DCCPPlatform].[dbo].gblEnterprise  as E  ON O.orgEnterprise         = E.entcode
+                LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
+                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
+                (year(s.fechacreacion)<= @YEAR)
+                ) s on E.entcode=s.EntCode collate Modern_Spanish_CI_AI
+                WHERE  U.usrIsActive       = 1
+                AND O.orgIsActive   = 1
+                AND E.entIsActive   = 1
+                and o.orgistest = 0
+                AND (U.usrEmail NOT LIKE '%ontraloria.cl' OR (U.usrEmail LIKE '%ontraloria.cl' AND E.entCode = '7231'))  -- 7231 Codigo de la Contraloria
+                AND (U.usrEmail NOT LIKE '%ontroloria.cl' OR (U.usrEmail LIKE '%ontroloria.cl' AND E.entCode = '7231'))
+                AND E.entName NOT IN ('MERCADOPUBLICOTEST','MPCOMPRADORTEST_SKY','MPCOMPRADORTEST_SKY2','DCCP-OPERACIONES-PRUEBA COMPRADOR') -- Usuarios de Prueba
+                AND U.usrPosition != ''             -- No consideramos contactos sin usrPosition
+                AND U.usrEmail  != ''        -- No consideramos contactos sin mail
+                AND YEAR(U.usrLastLogin) = @YEAR
+                AND U.usrLastLogin <= @endDate AND U.usrLastLogin >= @startDate
+                AND O.orgClass = 1
+                AND o.orgtaxid not in ('0-0','0.000.000-0','1-9','A.t21-125','yyyyyyyyyy')
+                GROUP BY E.entcode
+                , E.entName
+                , S.TipoSello
+                --, U.usrLastLogin
+                , O.orgTaxId
+                , O.OrgEnterprise
+                , YEAR(U.usrLastLogin)
+                , MONTH(U.usrLastLogin)
+               "
+			        	,x,y,window)
+			        	)  
+                  } 
+			        	
                   )
   
   
   descargar_guardar <- function(x, y) {
     
     data <- ejecutarConsulta(x = x, y = y, window = window)
-    
-    tipoConsulta <- switch(tipoConsulta,
-                           ofertan = "ofertan",
-                           adjudican = "adjudican",
-                           "otro")
-    
-    if (tipoConsulta == "otro") {
-      cat("Tipo de consulta no válido. Por favor, elige 'ofertan' o 'adjudican'.\n")
-      return(NULL)
-    }
-    
     # Guarda el objeto data en un archivo con nombre diferente según el tipo de consulta
-    saveRDS(data, file = paste0(gsub("-", "", today()), gsub(" ", "_", tipoConsulta), " en algún procedimiento de compra", y, ".rds"))
+    saveRDS(data, file = paste0(gsub("-", "", today()), gsub(" ", "_", tipoConsulta), " en algún procedimiento de compra ", y, ".rds"))
     
     return(data)
   }
   
   
-  mensaje <- ""
-  
   total <- data.table::data.table()
   
-  for (year in years) {
+  for (year in y) {
     if (year == year(today())) {
       start <- Sys.time()
       x <- month(today()) - 1
@@ -428,6 +326,8 @@ consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoCo
       end <- Sys.time()
       tiempo_transcurrido <- difftime(end, start, units = "mins")
       
+      cat("Descarga para el año", year, "completada en", round(tiempo_transcurrido,1), "minutos.", "\n")
+      
     } else {
       start <- Sys.time()
       y <- year
@@ -438,79 +338,35 @@ consultar_y_guardar <- function(wd_path = data_path, years, window = -12, tipoCo
       end <- Sys.time()
       tiempo_transcurrido <- difftime(end, start, units = "mins")
       
-      cat("Descarga para el año", year, "completada en", tiempo_transcurrido, "minutos.", "\n")
+      cat("Descarga para el año", year, "completada en", round(tiempo_transcurrido,1), "minutos.", "\n")
       }
-    }
+  }
+  return(total)
   }
   
 
-
-# Uso de la función
-years <- c(2022, 2023)
-ofertan_total <- consultar_y_guardar(wd_path = data_path
-                                     , years = years
-                                     , window = -12
-                                     , tipoConsulta = "ofertan", x = 12)
-
-
-
-# PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA 
-
-
-
-# start <- Sys.time()
-# adjudican_2023 = lapply(1:(month(today())-1), function(x) adjudican(x, year(today()))) %>%
-#    data.table::rbindlist()
-# adjudican_2022 = lapply(1:12, function(x) adjudican(x, 2022)) %>%
-#   data.table::rbindlist()
-# adjudican_ = rbind(adjudican_2022
-#                    ,adjudican_2023)
-# end <- Sys.time()
-# difftime(end, start, units="mins")
-
-# #
-#saveRDS(adjudican_, file = paste0(gsub("-", "", today()),gsub(" ","_"," reciben una orden de compra 2023.rds")))
-# #
-#
-
-
-
 details = detalles()
 
-#detalles()
-
-# Carga de datos históricos==============================
-
-# Llama a la función
-
-inscritos_ <- descargar_y_guardar_inscritos(wd_path = data_path)
 
 
-#login_ = readr::read_rds(details$files[grep("logueados", details$files)][1])
+years <- c(2022, 2023)
 
-# start <- Sys.time()
-# ofertan_2023 = lapply(1:((month(today()))-1), function(x) ofertan(x, year(today()))) %>%
-#   data.table::rbindlist()
-# ofertan_2022 = lapply(1:12, function(x) ofertan(x, 2022)) %>%
-#   data.table::rbindlist()
-# ofert = rbind(ofertan_2022
-#               ,ofertan_2023)
-# end <- Sys.time()
-# difftime(end, start, units="mins")
-# 
-# #
-# saveRDS(ofert, file = paste0(gsub("-", "", today()),gsub(" ","_"," ofertan en algún proceso de compra 2023.rds")))
+ofertan_ <-  consultar_y_guardar(wd_path = data_path
+                                 , x = 12
+                                 , y = years
+                                 ,tipoConsulta = "ofertan" )
+
+adjudican_ <-  consultar_y_guardar(wd_path = data_path
+                                 , x = 12
+                                 , y = years
+                                 ,tipoConsulta = "adjudican" )
+
+inscritos_ <-  consultar_y_guardar(wd_path = data_path
+                                 , x = 12
+                                 , y = years
+                                 ,tipoConsulta = "inscritos" )
 
 
-ofertan_2022 <- lapply(1:12, function(x) descargar_y_guardar_oferentes(wd_path = data_path, x = x, y = 2022)) %>% 
-  data.table::rbindlist()
-
-ofertan_2023 <- lapply(1:11, function(x) descargar_y_guardar_oferentes(wd_path = data_path, x = x, y = 2023)) %>% 
-  data.table::rbindlist()
-
-ofertan_ = rbind(ofertan_2022, ofertan_2023)
-
-adjudican_ = readr::read_rds(file = details$files[grep("reciben", details$files)][1])
 
 # CÁLCULO DEL ÍNDICE DE CARÁCTER TEMPORAL ======================================
 # 

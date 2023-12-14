@@ -353,18 +353,6 @@ colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
 t_4 <- readr::read_rds(file = "t_4.rds")
 
 
-p_41 <- ggplot(t_4[[1]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
-  geom_bar(stat = "identity", color = "black") +
-  scale_fill_manual(values = colores)+
-  # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
-   geom_text(aes(label = paste0(round(Proveedores, 0))), position = position_stack(vjust = 1.05))+
-  labs(title = "Empresas con Sello mujer 2022",
-       x = "Sello Mujer",
-       y = "Cantidad proveedores",
-       caption = "Elaboración propia a partir de datos de ChileCompra") +
-  theme_minimal() +
-  theme(legend.position = "top")
-
 p_42 <- ggplot(t_4[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
   geom_bar(stat = "identity", color = "black") +
   scale_fill_manual(values = colores)+
