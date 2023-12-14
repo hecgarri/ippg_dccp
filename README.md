@@ -104,42 +104,17 @@ adelante.
 
 ## Cantidad y Tasa de Participación de proveedoras en el sistema
 
-``` r
-q_4 = readr::read_rds(file = "sello_proveedores.rds") %>% 
-  mutate(Sello = formattable::comma(Sello, decimal.mark = ",", big.mark = "."), 
-         prop = formattable::comma(prop, decimal.mark = ",", big.mark = ".")) 
-
-colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
-
-ggplot(q_4, aes(x = reorder(`Sello Mujer`, -Sello), y = `Sello`, fill = `Sello Mujer`)) +
-  geom_bar(stat = "identity", color = "black") +
-  scale_fill_manual(values = colores)+
-   geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
-   geom_text(aes(label = paste0(round(Sello, 0))), position = position_stack(vjust = 1.05))+
-  labs(title = "Empresas con Sello mujer 2022",
-       x = "Sello Mujer",
-       y = "Cantidad proveedores",
-       caption = "Elaboración propia a partir de datos de ChileCompra") +
-  theme_minimal() +
-  theme(legend.position = "top")
-```
-
 ![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-``` r
-# kable(
-#   q_4,
-#   col.names = c("Sello Mujer", "Cantidad proveedores", "Proporción del total"),
-#   digits = 2,
-#   caption = "Empresas con Sello mujer 2022"
-#   ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
-#   footnote(
-#     general = "Elaboración propia a partir de datos de ChileCompra",
-#     general_title = "Nota:",
-#     footnote_as_chunk = TRUE
-#     )
-```
+De este cuadro se desprende que entre los años 2022 y 2023 se puede
+apreciar un aumento importante de proveedores activos en general en
+Mercado Público, con un aumento del 43% al pasar de 96.434 en 2022 a
+138.509 en 2023.
+
+Sin embargo, se aprecia que el aumento de empresas proveedoras lideradas
+por hombres es mayor al aumento de emmpresas lideradas por mujeres, pues
+las primeras experimentaron un aumento de un orden de 47% mientras que
+las segundas en un orden de 32%
 
 ## Propuesta
 

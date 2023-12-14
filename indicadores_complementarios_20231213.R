@@ -179,27 +179,18 @@ saveRDS(q_3, file = "q3_monto_cantidad_oc_segun_tipo_OC.rds")
 q_3 = readr::read_rds(file = "q3_monto_cantidad_oc_segun_tipo_OC.rds")
 
 
-q_4 = function(x,y, window){
+f_4 = function(x,y, window){
   sqlQuery(con2, sprintf("
                              
    DECLARE @MONTH AS INT;          
-              DECLARE @ANIO AS INT;
-              
-              SET @MONTH = %s;
-              SET @ANIO = %s;
-              
-              DECLARE @CURRENTMONTH datetime = datetimefromparts(@ANIO, @MONTH,1,0,0,0,0);
-              DECLARE @startDate datetime = dateadd(month,%s, @CURRENTMONTH)
-                , @endDate datetime = dateadd(month,1,@currentMonth);
-   
-   
-    DECLARE @ANIO as int
-    DECLARE @FechaIni Datetime;
-    DECLARE @FechaFin Datetime;
-    /* Fecha en yyyy-mm-dd*/
-    SET @FechaIni = CONVERT(DATETIME, '2022-01-01 00:00:00', 102);
-    SET @FechaFin = CONVERT(DATETIME, '2022-12-31 00:00:00', 102);
-    SET @ANIO = 2022;
+    DECLARE @ANIO AS INT;
+    
+    SET @MONTH = %s;
+    SET @ANIO = %s;
+    
+    DECLARE @CURRENTMONTH datetime = datetimefromparts(@ANIO, @MONTH,1,0,0,0,0);
+    DECLARE @startDate datetime = dateadd(month,%s, @CURRENTMONTH)
+      , @endDate datetime = dateadd(month,1,@currentMonth);
 
    with temp as(
     SELECT DISTINCT cast(C.entCode as nvarchar(50)) AS Transan
@@ -213,8 +204,8 @@ q_4 = function(x,y, window){
     INNER JOIN
     DCCPPlatform.dbo.gblEnterprise C with(nolock) ON B.orgEnterprise = C.entCode
     WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
-    (A.porSendDate < @FechaFin) AND
-    (A.porSendDate >= @FechaIni)
+    (A.porSendDate < @endDate) AND
+    (A.porSendDate >= @startDate)
 
     UNION
 
@@ -226,8 +217,8 @@ q_4 = function(x,y, window){
     INNER JOIN
     DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
     WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
-    (A.bidEconomicIssueDate < @FechaFin) AND
-    (A.bidEconomicIssueDate >= @FechaIni)
+    (A.bidEconomicIssueDate < @endDate) AND
+    (A.bidEconomicIssueDate >= @startDate)
 
     UNION
 
@@ -238,8 +229,8 @@ q_4 = function(x,y, window){
     INNER JOIN
     DCCPProcurement.dbo.prcPOHeader C ON
     A.porId = C.porID
-    WHERE (C.porSendDate < @FechaFin) AND
-    (C.porSendDate >= @FechaIni)
+    WHERE (C.porSendDate < @endDate) AND
+    (C.porSendDate >= @startDate)
 
 
     UNION
@@ -255,11 +246,11 @@ q_4 = function(x,y, window){
       FROM [DCCPProcurement].[dbo].[prcPOCotizacion] A
       INNER  JOIN DCCPPlatform..gblOrganization B ON
       A.proveedorRut=B.orgTaxID) AND
-    (C.porSendDate < @FechaFin) AND
-    (C.porSendDate >= @FechaIni)
+    (C.porSendDate < @endDate) AND
+    (C.porSendDate >= @startDate)
   )
   SELECT
-  s.TipoSello
+  (CASE WHEN s.TipoSello=3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
   , COUNT(DISTINCT t.Transan) [Proveedores]
 
   from temp t
@@ -275,20 +266,44 @@ q_4 = function(x,y, window){
       ) s on s.Transan collate Modern_Spanish_CI_AI = t.Transan
   GROUP BY s.TipoSello
 
-                      "
-))}
-
-q_4 = q_4 %>%
-  mutate(TipoSello = ifelse(!is.na(TipoSello),"Mujeres", "Hombres")) %>%
-  ungroup() %>%
-  mutate(total = sum(Proveedores),
-         prop = (Proveedores/total)*100) %>%
-  select(-total)
-
-saveRDS(q_4, file = "sello_proveedores.rds")
+                      ",x,y, window)
+  )
+}
 
 
-q_4 = readr::read_rds(file = "sello_proveedores.rds")
+t_4 <- lapply(c(2022,2023), function(y) f_4(x = 12, y, window = -11) %>% 
+                mutate(anio = y)) 
+
+saveRDS(t_4, file = "t_4.rds")
+
+# q_4 = q_4 %>%
+#   mutate(TipoSello = ifelse(!is.na(TipoSello),"Mujeres", "Hombres")) %>%
+#   ungroup() %>%
+#   mutate(total = sum(Proveedores),
+#          prop = (Proveedores/total)*100) %>%
+#   select(-total)
+# 
+# saveRDS(q_4, file = "sello_proveedores.rds")
+
+
+# q_4 = readr::read_rds(file = "sello_proveedores.rds")
+# 
+
+colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
+             "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
+
+ggplot(t_4, aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
+  geom_bar(stat = "identity", color = "black", position = "dodge") +
+  scale_fill_manual(values = colores)+
+#  geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
+#  geom_text(aes(label = paste0(round(Sello, 0))), position = position_stack(vjust = 1.05))+
+  labs(title = "Empresas con Sello mujer 2022",
+       x = "Sello Mujer",
+       y = "Cantidad proveedores",
+       caption = "Elaboración propia a partir de datos de ChileCompra") +
+  theme_minimal() +
+  theme(legend.position = "top")
+
 
 
 
