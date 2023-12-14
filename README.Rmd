@@ -428,6 +428,33 @@ En este caso, $R_{j,t}^{i}$ es un odds ratio para cada una de las etapas del pro
 El índice tiene como rango valores entre 0 e $\infty$, valores mayores a 1 indican una mayor preferencia por la contratación de empresas lideradas por mujeres, mientras que un valor cercano a 0 una mayor preferencia por empresas lideradas por hombres 
 
 
+```{r}
+
+indice = readr::read_rds(file = "20231214_datos_índice_agregado.rds")
+
+(
+  indice_plot = ggplot(indice, aes(x = fecha)) +
+    geom_line(aes(y = indicador, color = "General"), size = 1) +
+    geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
+    geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
+    geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
+    geom_text(aes(x = fecha, y = indicador, label = round(indicador*100,1)))+
+    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
+    geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta*100,1)))+
+    geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica*100,1)))+
+    labs(title = "Índice de Participación con Perspectiva de Género para todo el sistema, 2022-2023",
+         y = "Índice",
+         x = "Fecha", 
+         color = "Categoría") +
+    theme_minimal()
+)
+
+
+```
+
+
+## Resultados preliminares 
+
 ```{r, out.width = "80%"}
 
 ind_hist = readr::read_rds(file = "data_index_inst.rds")

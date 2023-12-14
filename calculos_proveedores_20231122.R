@@ -347,7 +347,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
 
 details = detalles()
 
-
+# CARGA DE DATOS ===============================================================
 
 years <- c(2022, 2023)
 
@@ -367,52 +367,55 @@ inscritos_ <-  consultar_y_guardar(wd_path = data_path
                                  ,tipoConsulta = "inscritos" )
 
 
-
+#
 # CÁLCULO DEL ÍNDICE DE CARÁCTER TEMPORAL ======================================
 # 
 
-comienzo = ofertan_ %>% 
-  group_by(Comienzo) %>% 
-  summarise(comienzos = n_distinct(Comienzo), 
-            `Mes Central` = `Mes Central`[1]
-            ,`Anio Central`=`Anio Central`[1]) %>% 
-  select(Comienzo, `Mes Central`, `Anio Central`)
+# Esta parte del código la he comentado porque la utilizo para construir un panel
+# sin embargo, para efectos de la pedida de las autoridades, se requiere sólo los
+# totales anuales, por lo que el tema quedará pendiente. Probablemente desarrolle
+# otra rama del proyecto más adelante. 
 
-final = ofertan_ %>% 
-  group_by(Final) %>% 
-  summarise(finales = n_distinct(Final)) %>% 
-  select(Final)
-
-intervalo = comienzo %>% 
-  mutate(Final = as.Date(final$Final)) %>% data.frame()
-
-
-start <- Sys.time()
-
-inscritos_ = lapply(1:nrow(intervalo), function(x){
-  inscritos_ %>%
-    filter(data.table::between(as.Date(`Fecha de creación empresa`),
-                               min(as.Date(`Fecha de creación empresa`)),
-                               as.Date(intervalo[x,4]))) %>% 
-    mutate(Final=intervalo[x,4],
-           `Mes Central` = intervalo[x,2]
-           ,`Anio Central` = intervalo[x,3])
-}) %>% data.table::rbindlist()
-end <- Sys.time()
-
-difftime(end, start, units="mins")
+# comienzo = ofertan_ %>% 
+#   group_by(Comienzo) %>% 
+#   summarise(comienzos = n_distinct(Comienzo), 
+#             `Mes Central` = `Mes Central`[1]
+#             ,`Anio Central`=`Anio Central`[1]) %>% 
+#   select(Comienzo, `Mes Central`, `Anio Central`)
+# 
+# final = ofertan_ %>% 
+#   group_by(Final) %>% 
+#   summarise(finales = n_distinct(Final)) %>% 
+#   select(Final)
+# 
+# intervalo = comienzo %>% 
+#   mutate(Final = as.Date(final$Final)) %>% data.frame()
+# 
+# 
+# start <- Sys.time()
+# 
+# inscritos_ = lapply(1:nrow(intervalo), function(x){
+#   inscritos_ %>%
+#     filter(data.table::between(as.Date(`Fecha de creación empresa`),
+#                                min(as.Date(`Fecha de creación empresa`)),
+#                                as.Date(intervalo[x,4]))) %>% 
+#     mutate(Final=intervalo[x,4],
+#            `Mes Central` = intervalo[x,2]
+#            ,`Anio Central` = intervalo[x,3])
+# }) %>% data.table::rbindlist()
+# end <- Sys.time()
+# 
+# difftime(end, start, units="mins")
 
 
 data_index = inscritos_ %>% 
   left_join(ofertan_, by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>%
-  left_join(adjudican_ %>% 
-              mutate(`Sello Mujer` = ifelse(`Sello Mujer`== 1, "Mujeres", "Hombres"))
-            , by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>% 
+  left_join(adjudican_, by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>% 
   mutate(ofrece = ifelse(!is.na(`Rut Proveedor.y`), 1, 0), 
          gana = ifelse(!is.na(`Rut Proveedor`),1,0))
 
 # Gráfico del Índice de Participación con Perspectiva de Género =========================  
-
+(
 indice =  data_index %>% 
     group_by(`Sello Mujer`, `Mes Central`, `Anio Central`) %>%
     summarise(participantes = n()
@@ -427,18 +430,7 @@ indice =  data_index %>%
            ,r_adjudica = (ganadores_Mujeres/ganadores_Hombres), 
            ) %>% 
     rowwise() %>% 
-    mutate(indicador = ((r_participa^(1/3))*(r_oferta^(1/3))*(r_adjudica^(1/3)))) %>% 
-    ungroup() %>% 
-    arrange(`Mes Central`) %>% 
-    arrange(`Anio Central`) %>% 
-    mutate(indice = (indicador/indicador[1])*100,
-           var_ind = ((indice-lag(indice))/lag(indice))*100
-           , indice_part = (r_participa/r_participa[1])*100
-           ,indice_oferta= (r_oferta/r_oferta[1])*100
-           ,indice_adjudica = (r_adjudica/r_adjudica[1])*100
-           ,var_part = ((indice_part-lag(indice_part))/lag(indice_part))*100
-           ,var_ofert = ((indice_oferta-lag(indice_oferta))/lag(indice_oferta))*100
-           ,var_adjudica = ((indice_adjudica-lag(indice_adjudica))/lag(indice_adjudica))*100
+    mutate(indicador = ((r_participa^(1/3))*(r_oferta^(1/3))*(r_adjudica^(1/3))))
 )
 
 saveRDS(indice,
@@ -448,23 +440,27 @@ saveRDS(indice,
 
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +
-    geom_line(aes(y = indice, color = "General"), size = 1) +
-    geom_line(aes(y = indice_part, color = "Participación"), size = 1) +
-    geom_line(aes(y = indice_oferta, color = "Oferta"), size = 1) +
-    geom_line(aes(y = indice_adjudica, color = "Adjudicación"), size = 1) +
-    labs(title = "Índice de Participación con Perspectiva de Género",
-         y = "Índice (Base: Enero 2022)",
+    geom_line(aes(y = indicador, color = "General"), size = 1) +
+    geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
+    geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
+    geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
+    geom_text(aes(x = fecha, y = indicador, label = round(indicador*100,1)))+
+    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
+    geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta*100,1)))+
+    geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica*100,1)))+
+    labs(title = "Índice de Participación con Perspectiva de Género para todo el sistema, 2022-2023",
+         y = "Índice",
          x = "Fecha", 
          color = "Categoría") +
     theme_minimal()
 )
 
-(
-  indice_plotly = ggplotly(indice_plot)
-)
-
-htmlwidgets::saveWidget(indice_plotly,
-                        file = paste0(gsub("datos", "ippg_dccp", wd_path),"/indice_interactivo.html"))
+# (
+#   indice_plotly = ggplotly(indice_plot)
+# )
+# 
+# htmlwidgets::saveWidget(indice_plotly,
+#                         file = paste0(gsub("datos", "ippg_dccp", wd_path),"/indice_interactivo.html"))
 
 
 # OFERENTES DE CADA INSTITUCIÓN DEL ESTADO  ===============================================
