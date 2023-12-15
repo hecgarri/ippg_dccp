@@ -1,5 +1,5 @@
 ---
-title: "Cuaderno de investigación: Índice de Participación con Perspectiva de Género"
+title: "Cuaderno de Laboratorio: Índice de Participación con Perspectiva de Género"
 output: github_document
 ---
 
@@ -452,10 +452,16 @@ indice = readRDS(file = paste0(wd_path,"20231214_datos_indice_agregado.rds"))
 
 ```
 
+En esta figura se puede apreciar que existe una mejora en términos de cada una de las dimensiones bajo análisis (participación, oferta y adjudicación), pero que ha sido más pronunciado en algunas dimensiones que en otras, eb esa línea, el cambio más discreto ocurre en el ratio de participación, pasando desde 32.4 a 33.8 que significa una variación de 4.3%. En materia de oferta, el índice pasa de 29.8 a 37.3, un aumento del 25,2%, es decir, la dimensión que más crece, pues en el caso de la adjudicación, observamos que pasa desde 41.2 a 47.4, representando un aumento de 15%. 
+
+Con todo, podemos observar que el índice general pasa de 34.2 a 39.1, es decir una variación de 14.3%
+
+Este es un hallazgo interesante pues apreciamos que aunque existe un brusco aumento de la oferta, muchas de ellas no se materializan en una adjudicación
+
 
 ## Resultados preliminares 
 
-```{r, out.width = "80%"}
+```{r, out.width = "80%",  echo = FALSE, warning=FALSE}
 
 ind_hist = readr::read_rds(file = "data_index_inst.rds")
 
@@ -478,7 +484,7 @@ ind_hist = readr::read_rds(file = "data_index_inst.rds")
 
 ## Resultados preliminares
 
-```{r}
+```{r, echo = FALSE, warning=FALSE}
 
 ind_hist = readr::read_rds(file = "20231126_datos_índice_desagregado_por_instituciones.rds")
 

@@ -1,4 +1,4 @@
-Cuaderno de investigación: Índice de Participación con Perspectiva de
+Cuaderno de Laboratorio: Índice de Participación con Perspectiva de
 Género
 ================
 
@@ -159,25 +159,24 @@ preferencia por empresas lideradas por hombres
 
 ![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
+En esta figura se puede apreciar que existe una mejora en términos de
+cada una de las dimensiones bajo análisis (participación, oferta y
+adjudicación), pero que ha sido más pronunciado en algunas dimensiones
+que en otras, eb esa línea, el cambio más discreto ocurre en el ratio de
+participación, pasando desde 32.4 a 33.8 que significa una variación de
+4.3%. En materia de oferta, el índice pasa de 29.8 a 37.3, un aumento
+del 25,2%, es decir, la dimensión que más crece, pues en el caso de la
+adjudicación, observamos que pasa desde 41.2 a 47.4, representando un
+aumento de 15%.
+
+Con todo, podemos observar que el índice general pasa de 34.2 a 39.1, es
+decir una variación de 14.3%
+
+Este es un hallazgo interesante pues apreciamos que aunque existe un
+brusco aumento de la oferta, muchas de ellas no se materializan en una
+adjudicación
+
 ## Resultados preliminares
-
-``` r
-ind_hist = readr::read_rds(file = "data_index_inst.rds")
-
-
-(
-  ind_hist = ggplot(ind_hist %>% 
-                      arrange(indicador), aes(indicador, , y = ..density..)) +
-    geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
-    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
-    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
-    labs(title = "Histograma del IPPG",
-         x = "IPPG",
-         y = "Frecuencia")+
-    theme_minimal()
-  
-)
-```
 
     ## Warning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.
     ## ℹ Please use `after_stat(density)` instead.
@@ -188,24 +187,6 @@ ind_hist = readr::read_rds(file = "data_index_inst.rds")
 <img src="README_files/figure-gfm/unnamed-chunk-7-1.png" width="80%" />
 
 ## Resultados preliminares
-
-``` r
-ind_hist = readr::read_rds(file = "20231126_datos_índice_desagregado_por_instituciones.rds")
-
-
-(
-  ind_hist = ggplot(datos_ind_fil %>% 
-                      arrange(indicador), aes(indicador, , y = ..density..)) +
-    geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
-    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
-    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
-    labs(title = "Histograma del IPPG",
-         x = "IPPG",
-         y = "Frecuencia")+
-    theme_minimal()
-  
-)
-```
 
 ![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 

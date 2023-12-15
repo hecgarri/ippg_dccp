@@ -70,7 +70,9 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
   if (length(years) == 0 || !tipoConsulta %in% c('ofertan'
                                                  , 'adjudican'
                                                  ,'login'
-                                                 ,'inscritos')) {
+                                                 ,'inscritos'
+                                                 ,'ofertan_inst'
+                                                 ,'adjudican_inst')) {
     mensaje <- "Parámetros inválidos. Asegúrate de proporcionar años y/o tipo de consulta válidos."
     return(mensaje)
   }
@@ -297,8 +299,166 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                "
 			        	,x,y,window)
 			        	)  
-                  } 
-			        	
+                  },
+			        	"ofertan_inst" = function(x,y, window){sqlQuery(con2, sprintf(
+			        	  "
+                DECLARE @MONTH AS INT;
+                DECLARE @YEAR AS INT;
+                  
+  
+                SET @MONTH = %s;
+                SET @YEAR = %s;
+                  
+                DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
+                DECLARE @startDate datetime = dateadd(month, %s, @currentMonth)
+                , @endDate datetime = dateadd(month, 1, @currentMonth);
+                
+                WITH TEMP as(
+            
+  			        SELECT DISTINCT
+                UPPER(C.orgTaxID) collate Modern_Spanish_CI_AI [Rut Proveedor] 
+                ,C.orgEnterprise collate Modern_Spanish_CI_AI [EntCode]
+                ,E.entname [Organismo]
+                --,'Oferta en licitaciones (o convenio Marco)' collate Modern_Spanish_CI_AI [Tipo de participacion] 
+                , COUNT(DISTINCT A.bidRFBCode) [Cantidad ofertas]
+                FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
+                INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
+                INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
+                INNER JOIN DCCPPlatform.dbo.gblOrganization D with(nolock) ON B.rbhOrganization = D.orgCode
+                INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
+                WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
+                (A.bidEconomicIssueDate < @endDate) AND
+                (A.bidEconomicIssueDate >= @startDate)
+                GROUP BY 
+  			        C.orgTaxID
+                , C.orgEnterprise
+                , E.entname
+                , B.rbhOrganization
+                
+                UNION 
+                
+                SELECT DISTINCT 
+                UPPER(A.proveedorRut) [Rut Proveedor]
+                ,B.orgEnterprise [EntCode]
+                ,E.entname [Organismo]
+                --,B.orgLegalName [Razon Social]
+                ,B.orgCode [CodigoOrganismo]
+                --,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
+                , COUNT(DISTINCT C.porID) [Cantidad ofertas]
+                FROM DCCPProcurement.dbo.prcPOCotizacion A
+                INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
+                INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
+                INNER JOIN DCCPPlatform.dbo.gblOrganization D ON C.porBuyerOrganization = D.orgCode
+                INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
+                WHERE (C.porSendDate < @endDate) AND
+                (C.porSendDate >= @startDate)
+                GROUP BY 
+                A.proveedorRut
+                ,B.orgEnterprise
+  			        , E.entname
+                ,B.orgCode
+  
+                UNION
+                
+                SELECT DISTINCT
+                UPPER(B.orgTaxID) [Rut Proveedor]
+                ,COTI.CodigoEmpresa collate Modern_Spanish_CI_AI [EntCode]
+                ,E.entname [Organismo]
+                ,SOLI.CodigoOrganismo [CodigoOrganismo]
+                --,'Entrega cotización para Compra ágil' [Tipo de participacion]
+                ,COUNT(DISTINCT SOLI.Id) [Cantidad ofertas]
+                FROM DCCPCotizacion.dbo.SolicitudCotizacion  SOLI
+                INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
+                INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_CI_AI =B.orgEnterprise collate Modern_Spanish_CI_AI
+                INNER JOIN DCCPPlatform.dbo.gblOrganization D ON SOLI.CodigoOrganismo  = D.orgCode collate Modern_Spanish_CI_AI
+                INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode 
+                /* Unir e.entCode con gblEnterprise como O de organismo unirlo on T.entCode*/
+                /* O.entname de la institución*/
+                WHERE SOLI.FechaCierre <= @endDate AND EstadoId = 2 
+              	GROUP BY
+              	B.orgTaxID
+  				      ,COTI.CodigoEmpresa
+              	,E.entname
+              	,SOLI.CodigoOrganismo
+              	)
+              	
+              	SELECT DISTINCT
+              	    UPPER(T.Organismo) [Organismo]
+                    ,T.[Rut Proveedor]
+                    ,T.EntCode
+                    --,T.[Razon Social]
+                    , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+                    ,T.[Cantidad ofertas]
+                    , @MONTH [Mes Central]
+                    , @YEAR [Anio Central]
+                    , @startDate [Comienzo]
+                    , @endDate [Final]
+              	FROM TEMP T
+              	LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
+                  FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                  WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                  (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
+                  (year(s.fechacreacion)<= @YEAR)
+                  ) s on T.EntCode=s.EntCode
+                       "
+  				      ,x,y,window)
+			        	)},
+			        	"adjudican_inst" = function(x,y, window){
+			        	  sqlQuery(con2, sprintf(
+			        	    "
+                DECLARE @MONTH AS INT;
+                DECLARE @YEAR AS INT;
+                
+                SET @MONTH = %s;
+                SET @YEAR = %s;
+                
+                
+                DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
+                DECLARE @startDate datetime = dateadd(month, %s, @currentMonth)
+                , @endDate datetime = dateadd(month, 1, @currentMonth);
+                
+                /*Reciben una orden de compra*/
+                  
+                  SELECT DISTINCT 
+                  UPPER(E.entName) [Organismo]  
+                  , O.orgTaxID [Rut Proveedor]
+                  , O.orgEnterprise [EntCode] -- Código Empresa
+                  , D.orgEnterprise [OrgCode] -- Código Institución 
+                  , C.entName [Razon Social]
+                  ,(CASE S.TipoSello WHEN 3 THEN 1 ELSE 0 END) [Sello Mujer]
+                  , COUNT(DISTINCT A.porID) [Cantidad OC]
+                  , @MONTH [Mes Central]
+                  , @YEAR [Anio Central]
+                  , @startDate [Comienzo]
+                  , @endDate [Final]
+                
+                FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
+                INNER JOIN DCCPPlatform.dbo.gblOrganization O with(nolock) ON A.porSellerOrganization = O.orgCode
+                INNER JOIN DCCPPlatform.dbo.gblEnterprise C with(nolock) ON O.orgEnterprise = C.entCode
+                INNER JOIN DCCPPlatform.dbo.gblOrganization D with(nolock) ON A.porBuyerOrganization = D.orgCode
+                INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
+                LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
+                          FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                          WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                          (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
+                          (year(s.fechacreacion)<= @YEAR)
+                          ) s on C.EntCode collate Modern_Spanish_CI_AI =s.EntCode
+                WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
+                  (A.porSendDate < @endDate) AND
+                (A.porSendDate >= @startDate)
+                GROUP BY 
+                E.entName
+                ,O.orgTaxID
+            	  ,O.orgEnterprise
+                ,D.orgEnterprise
+                ,C.entName
+                ,S.TipoSello
+          
+          ", x, y, window)
+          			        	  )
+          			        	  
+          			        	}
+       	
                   )
   
   
@@ -467,185 +627,25 @@ indice = readRDS(file = "20231214_datos_indice_agregado.rds")
 
 # OFERENTES DE CADA INSTITUCIÓN DEL ESTADO  ===============================================
 
-ofertan_inst = function(x,y) sqlQuery(con2, paste0(
-  "
-                            DECLARE @YEAR AS INT;
-              DECLARE @MONTH AS INT;
-                
-              SET @YEAR = 2023;
-              SET @MONTH = 10;
-                
-              DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-              DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
-              , @endDate datetime = dateadd(month, 1, @currentMonth);
-              
-              WITH TEMP as(
-          
-			  SELECT DISTINCT
-              UPPER(C.orgTaxID) collate Modern_Spanish_CI_AI [Rut Proveedor] 
-              ,C.orgEnterprise collate Modern_Spanish_CI_AI [EntCode]
-              ,E.entname [Organismo]
-              ,B.rbhOrganization collate Modern_Spanish_CI_AI [CodigoOrganismo]
-              --,'Oferta en licitaciones (o convenio Marco)' collate Modern_Spanish_CI_AI [Tipo de participacion] 
-              , COUNT(DISTINCT A.bidRFBCode) [Cantidad ofertas]
-              FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
-              INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
-              INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
-              INNER JOIN DCCPPlatform.dbo.gblOrganization D with(nolock) ON B.rbhOrganization = D.orgCode
-              INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
-              WHERE (A.bidDocumentStatus IN (3, 4, 5)) AND
-              (A.bidEconomicIssueDate < @endDate) AND
-              (A.bidEconomicIssueDate >= @startDate)
-              GROUP BY 
-			        C.orgTaxID
-              , C.orgEnterprise
-              , E.entname
-              , B.rbhOrganization
-              
-              UNION 
-              
-              SELECT DISTINCT 
-              UPPER(A.proveedorRut) [Rut Proveedor]
-              ,B.orgEnterprise [EntCode]
-              ,E.entname [Organismo]
-              --,B.orgLegalName [Razon Social]
-              ,B.orgCode [CodigoOrganismo]
-              --,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
-              , COUNT(DISTINCT C.porID) [Cantidad ofertas]
-              FROM DCCPProcurement.dbo.prcPOCotizacion A
-              INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
-              INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
-              INNER JOIN DCCPPlatform.dbo.gblOrganization D ON C.porBuyerOrganization = D.orgCode
-              INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
-              WHERE (C.porSendDate < @endDate) AND
-              (C.porSendDate >= @startDate)
-              GROUP BY 
-              A.proveedorRut
-              ,B.orgEnterprise
-			        , E.entname
-              ,B.orgCode
+years <- c(2022, 2023)
 
-              UNION
-              
-              SELECT DISTINCT
-              UPPER(B.orgTaxID) [Rut Proveedor]
-              ,COTI.CodigoEmpresa collate Modern_Spanish_CI_AI [EntCode]
-              ,E.entname [Organismo]
-              ,SOLI.CodigoOrganismo [CodigoOrganismo]
-              --,'Entrega cotización para Compra ágil' [Tipo de participacion]
-              ,COUNT(DISTINCT SOLI.Id) [Cantidad ofertas]
-              FROM DCCPCotizacion.dbo.SolicitudCotizacion  SOLI
-              INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
-              INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_CI_AI =B.orgEnterprise collate Modern_Spanish_CI_AI
-              INNER JOIN DCCPPlatform.dbo.gblOrganization D ON SOLI.CodigoOrganismo  = D.orgCode collate Modern_Spanish_CI_AI
-              INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode 
-              /* Unir e.entCode con gblEnterprise como O de organismo unirlo on T.entCode*/
-              /* O.entname de la institución*/
-              WHERE SOLI.FechaCierre <= @endDate AND EstadoId = 2 
-            	GROUP BY
-            	B.orgTaxID
-				      ,COTI.CodigoEmpresa
-            	,E.entname
-            	,SOLI.CodigoOrganismo
-            	)
-            	
-            	SELECT DISTINCT
-            	    UPPER(T.Organismo) [Organismo]
-                  ,T.[Rut Proveedor]
-                  ,T.EntCode
-                  --,T.[Razon Social]
-                  , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
-                  ,T.[Cantidad ofertas]
-                  , @MONTH [Mes Central]
-                  , @YEAR [Anio Central]
-                  , @startDate [Comienzo]
-                  , @endDate [Final]
-            	FROM TEMP T
-            	LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
-                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
-                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
-                ) s on T.EntCode=s.EntCode
-                     "
-)
-)
+ofertan_inst <-  consultar_y_guardar(wd_path = data_path
+                                 , x = 12
+                                 , y = years
+                                 ,tipoConsulta = "ofertan_inst" )
 
-# start <- Sys.time()
-# ofertan_inst_ = lapply(10, function(x) ofertan_inst(x,2023)) %>%
-#   data.table::rbindlist()
-# end <- Sys.time()
-# difftime(end, start, units="mins")
 
-# # # 
-# saveRDS(ofertan_inst_, file = paste0(gsub("-", "", today()),gsub(" ","_"," institución recibe una oferta de compra 2023.rds")))
-# # # 
 
 # PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA DE CADA INSTITUCIÓN DEL ESTADO ===========================
 
-adjudican_inst = function(x,y) sqlQuery(con2, paste0(
-  "
-      DECLARE @YEAR AS INT;
-      DECLARE @MONTH AS INT;
-      
-      SET @YEAR = ",y,";
-      SET @MONTH = ",x,";
-      
-      DECLARE @CURRENTMONTH datetime = datetimefromparts(@YEAR, @MONTH, 1,0,0,0,0);
-      DECLARE @startDate datetime = dateadd(month, -12, @currentMonth)
-      , @endDate datetime = dateadd(month, 1, @currentMonth);
-      
-      /*Reciben una orden de compra*/
-        
-        SELECT DISTINCT 
-        UPPER(E.entName) [Organismo]  
-        , O.orgTaxID [Rut Proveedor]
-        , O.orgEnterprise [EntCode] -- Código Empresa
-        , D.orgEnterprise [OrgCode] -- Código Institución 
-        , C.entName [Razon Social]
-        ,(CASE S.TipoSello WHEN 3 THEN 1 ELSE 0 END) [Sello Mujer]
-        , COUNT(DISTINCT A.porID) [Cantidad OC]
-        , @MONTH [Mes Central]
-        , @YEAR [Anio Central]
-        , @startDate [Comienzo]
-        , @endDate [Final]
-      
-      FROM DCCPProcurement.dbo.prcPOHeader A with(nolock)
-      INNER JOIN DCCPPlatform.dbo.gblOrganization O with(nolock) ON A.porSellerOrganization = O.orgCode
-      INNER JOIN DCCPPlatform.dbo.gblEnterprise C with(nolock) ON O.orgEnterprise = C.entCode
-      INNER JOIN DCCPPlatform.dbo.gblOrganization D with(nolock) ON A.porBuyerOrganization = D.orgCode
-      INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
-      LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
-                FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
-                (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
-                ) s on C.EntCode collate Modern_Spanish_CI_AI =s.EntCode
-      WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
-        (A.porSendDate < @endDate) AND
-      (A.porSendDate >= @startDate)
-      GROUP BY 
-      E.entName
-      ,O.orgTaxID
-  	  ,O.orgEnterprise
-      ,D.orgEnterprise
-      ,C.entName
-      ,S.TipoSello
+years <- c(2022, 2023)
 
-")
-)
+adjudican_inst <-  consultar_y_guardar(wd_path = data_path
+                                   , x = 12
+                                   , y = years
+                                   ,tipoConsulta = "adjudican_inst" )
 
-
-# start <- Sys.time()
-# adjudican_inst_ = lapply(10, function(x) adjudican_inst(x, 2023)) %>%
-#     data.table::rbindlist()
-# end <- Sys.time()
-# adjudican_inst_t = difftime(end, start, units="mins")
-# 
-# # #
-# saveRDS(adjudican_inst_, file = paste0(gsub("-", "", today()),gsub(" ","_"," institución emite una orden de compra 2023.rds")))
-# # #
-# #
+ 
 
 # CÁLCULO DEL ÍNDICE POR INSTITUCIONES =========================================
 
