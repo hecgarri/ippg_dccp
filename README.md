@@ -157,6 +157,10 @@ El índice tiene como rango valores entre 0 e $\infty$, valores mayores a
 lideradas por mujeres, mientras que un valor cercano a 0 una mayor
 preferencia por empresas lideradas por hombres
 
+![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+## Resultados preliminares
+
 ``` r
 ind_hist = readr::read_rds(file = "data_index_inst.rds")
 
@@ -175,19 +179,13 @@ ind_hist = readr::read_rds(file = "data_index_inst.rds")
 )
 ```
 
-    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-    ## ℹ Please use `linewidth` instead.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
     ## Warning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.
     ## ℹ Please use `after_stat(density)` instead.
     ## This warning is displayed once every 8 hours.
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
 
-<img src="README_files/figure-gfm/unnamed-chunk-6-1.png" width="80%" />
+<img src="README_files/figure-gfm/unnamed-chunk-7-1.png" width="80%" />
 
 ## Resultados preliminares
 
@@ -209,7 +207,7 @@ ind_hist = readr::read_rds(file = "20231126_datos_índice_desagregado_por_instit
 )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ## Agenda
 

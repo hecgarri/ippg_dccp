@@ -428,9 +428,9 @@ En este caso, $R_{j,t}^{i}$ es un odds ratio para cada una de las etapas del pro
 El índice tiene como rango valores entre 0 e $\infty$, valores mayores a 1 indican una mayor preferencia por la contratación de empresas lideradas por mujeres, mientras que un valor cercano a 0 una mayor preferencia por empresas lideradas por hombres 
 
 
-```{r}
+```{r, echo=FALSE, warning=FALSE}
 
-indice = readr::read_rds(file = "20231214_datos_índice_agregado.rds")
+indice = readRDS(file = paste0(wd_path,"20231214_datos_indice_agregado.rds"))
 
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +

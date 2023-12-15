@@ -435,7 +435,9 @@ indice =  data_index %>%
 
 saveRDS(indice,
         file = paste0(gsub("-", "", today()),
-                      gsub(" ","_"," datos índice agregado.rds")))
+                      gsub(" ","_"," datos indice agregado.rds")))
+
+indice = readRDS(file = "20231214_datos_indice_agregado.rds")
 
 
 (
