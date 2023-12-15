@@ -178,12 +178,6 @@ adjudicación
 
 ## Resultados preliminares
 
-    ## Warning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.
-    ## ℹ Please use `after_stat(density)` instead.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
 <img src="README_files/figure-gfm/unnamed-chunk-7-1.png" width="80%" />
 
 ## Resultados preliminares
