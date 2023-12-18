@@ -634,7 +634,7 @@ ofertan_inst <-  consultar_y_guardar(wd_path = data_path
                                  ,tipoConsulta = "ofertan_inst" )
 
 
-
+saveRDS(ofertan_inst, file = "20231215_institución_recibe_una_oferta.rds")
 # PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA DE CADA INSTITUCIÓN DEL ESTADO ===========================
 
 years <- c(2022, 2023)
@@ -644,7 +644,7 @@ adjudican_inst <-  consultar_y_guardar(wd_path = data_path
                                    , y = years
                                    ,tipoConsulta = "adjudican_inst" )
 
- 
+saveRDS(adjudican_inst, file = "20231215_institución_adjudica_una_oc.rds") 
 
 # CÁLCULO DEL ÍNDICE POR INSTITUCIONES =========================================
 
@@ -660,9 +660,9 @@ details = detalles()
 #   
 
 
-ofertan_instituciones = readr::read_rds(file = "20231124_institución_recibe_una_oferta_de_compra_2023.rds")
+ofertan_instituciones = readr::read_rds(file = "20231215_institución_recibe_una_oferta.rds")
 
-adjudican_instituciones = readr::read_rds(file = "20231124_institución_recibe_una_orden_de_compra_2023.rds")
+adjudican_instituciones = readr::read_rds(file = "20231215_institución_adjudica_una_oc.rds")
 
 
 (
@@ -670,7 +670,7 @@ adjudican_instituciones = readr::read_rds(file = "20231124_institución_recibe_u
     group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
     summarise(n = n()) %>% 
     setDT() %>% 
-    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n"))  %>% 
+    data.table::dcast(formula = `Organismo`+`Anio Central`~`Sello Mujer`, value.var = c("n"))  %>% 
     mutate(r_ofer = (Mujeres/Hombres))
 )
 
@@ -681,18 +681,65 @@ adjudican_instituciones = readr::read_rds(file = "20231124_institución_recibe_u
     group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
     summarise(n = n()) %>% 
     setDT() %>% 
-    data.table::dcast(formula = `Organismo`~`Sello Mujer`, value.var = c("n"))  %>% 
+    data.table::dcast(formula = `Organismo`+`Anio Central`~`Sello Mujer`, value.var = c("n"))  %>% 
     mutate(r_adj = (Mujeres/Hombres))
 )
 
 
 data_index_inst = 
   of_inst %>% 
-  left_join(adj_inst, by = c("Organismo")) %>% 
+  left_join(adj_inst, by = c("Organismo", "Anio Central")) %>% 
   mutate(indicador = sqrt(r_ofer*r_adj)) %>% 
-  filter(!is.na(indicador))
+  filter(!is.na(indicador)) 
 
-saveRDS(data_index_inst, file = "data_index_inst.rds")
+medias <- aggregate(indicador ~ `Anio Central`, data = data_index_inst, mean)
+
+
+(
+  ind_hist = ggplot(data_index_inst, aes(indicador,fill = as.factor(`Anio Central`))) +
+    geom_density(alpha = .5) +
+#    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
+    geom_vline(aes(xintercept = indicador, color = `Anio Central`),
+               linetype = "dashed", size = 1, data = medias) +
+    # geom_text(aes(x = indicador, label = round(indicador, 2)),
+    #           vjust = -0.5, data = medias)+
+    labs(title = "Histograma del IPPG",
+         x = "IPPG",
+         y = "Frecuencia")+
+    theme_minimal()
+  
+)
+
+data_inst <- data_index_inst %>%
+  data.table::setDT() %>%
+  data.table::dcast(formula = `Organismo`~`Anio Central`
+                    , value.var = c("Hombres.x"
+                                    , "Mujeres.x"
+                                    , "r_ofer"
+                                    , "Hombres.y"
+                                    , "Mujeres.y"
+                                    ,"r_adj"
+                                    , "indicador")) %>%
+  mutate(var = (indicador_2023-indicador_2022)/indicador_2022) %>%
+  rename(`Organismo comprador` = `Organismo`
+         ,`Oferta Hombres 2022` = Hombres.x_2022
+         ,`Oferta Hombres 2023` = Hombres.x_2023
+         ,`Oferta Mujeres 2022` = Mujeres.x_2022
+         , `Oferta Mujeres 2023` = Mujeres.x_2023
+         ,`Ratio Oferta 2022` = r_ofer_2022
+         , `Ratio Oferta 2023` = r_ofer_2023
+         , `Adjudican Hombres 2022` = Hombres.y_2022
+         ,`Adjudican Hombres 2023`  = Hombres.y_2023
+         ,`Adjudican Mujeres 2022` = Mujeres.y_2022
+         ,`Adjudican Mujeres 2023` = Mujeres.y_2023
+         ,`Ratio adjudicación 2022` = r_adj_2022
+         ,`Ratio adjudicación 2023` = r_adj_2023
+         ,`IPPG 2022` = indicador_2022
+         ,`IPPG 2023` = indicador_2023)
+
+write.csv(data_inst, file = "20231218_data_index_inst.csv")
+
+saveRDS(data_index_inst, file = "20231218_data_index_inst.rds")
 
 # ANÁLISIS Y VISUALIZACIÓN DE LOS DATOS ==========================================
 

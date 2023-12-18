@@ -463,22 +463,25 @@ Este es un hallazgo interesante pues apreciamos que aunque existe un brusco aume
 
 ```{r, out.width = "80%",  echo = FALSE, warning=FALSE}
 
-ind_hist = readr::read_rds(file = "data_index_inst.rds")
+data_index_inst = readr::read_rds(file = paste0(wd_path, "20231218_data_index_inst.rds"))
 
+
+medias <- aggregate(indicador ~ `Anio Central`, data = data_index_inst, mean)
 
 (
-  ind_hist = ggplot(ind_hist %>% 
-                      arrange(indicador), aes(indicador, , y = ..density..)) +
-    geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
-    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
-    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
+  ind_hist = ggplot(data_index_inst, aes(indicador,fill = as.factor(`Anio Central`))) +
+    geom_density(alpha = .5) +
+#    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
+    geom_vline(aes(xintercept = indicador, color = `Anio Central`),
+               linetype = "dashed", size = 1, data = medias) +
+    # geom_text(aes(x = indicador, label = round(indicador, 2)),
+    #           vjust = -0.5, data = medias)+
     labs(title = "Histograma del IPPG",
          x = "IPPG",
          y = "Frecuencia")+
     theme_minimal()
   
 )
-
 ```
 
 
