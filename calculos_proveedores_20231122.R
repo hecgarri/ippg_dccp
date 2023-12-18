@@ -525,6 +525,10 @@ inscritos_ <-  consultar_y_guardar(wd_path = data_path
                                  , y = years
                                  ,tipoConsulta = "inscritos" )
 
+inscritos_2022 <- inscritos_ %>% 
+  mutate(`Fecha de creación empresa` = as.Date(`Fecha de creación empresa`)) %>% 
+  filter(`Fecha de creación empresa`>=as.Date("2022-01-01"))
+
 
 #
 # CÁLCULO DEL ÍNDICE DE CARÁCTER TEMPORAL ======================================
@@ -568,6 +572,12 @@ inscritos_ <-  consultar_y_guardar(wd_path = data_path
 
 
 data_index = inscritos_ %>% 
+  left_join(ofertan_, by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>%
+  left_join(adjudican_, by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>% 
+  mutate(ofrece = ifelse(!is.na(`Rut Proveedor.y`), 1, 0), 
+         gana = ifelse(!is.na(`Rut Proveedor`),1,0))
+
+data_cohorte_2022 = inscritos_2022 %>% 
   left_join(ofertan_, by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>%
   left_join(adjudican_, by = c("EntCode", "Mes Central", "Anio Central", "Sello Mujer")) %>% 
   mutate(ofrece = ifelse(!is.na(`Rut Proveedor.y`), 1, 0), 
@@ -623,6 +633,50 @@ indice = readRDS(file = "20231214_datos_indice_agregado.rds")
 # htmlwidgets::saveWidget(indice_plotly,
 #                         file = paste0(gsub("datos", "ippg_dccp", wd_path),"/indice_interactivo.html"))
 
+
+
+# Gráfico del Índice de Participación con Perspectiva de Género =========================  
+(
+  indice_c_2022 =  data_cohorte_2022 %>% 
+    group_by(`Sello Mujer`, `Mes Central`, `Anio Central`) %>%
+    summarise(participantes = n()
+              ,oferentes = sum(ofrece)
+              ,ganadores = sum(gana)) %>% 
+    mutate(fecha = as.Date(paste(`Anio Central`
+                                 , `Mes Central`, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
+    setDT() %>% 
+    dcast(formula = ...~`Sello Mujer`, value.var = c("participantes", "oferentes", "ganadores")) %>% 
+    mutate(r_participa = (participantes_Mujeres/participantes_Hombres)
+           ,r_oferta = (oferentes_Mujeres/oferentes_Hombres) 
+           ,r_adjudica = (ganadores_Mujeres/ganadores_Hombres), 
+    ) %>% 
+    rowwise() %>% 
+    mutate(indicador = ((r_participa^(1/3))*(r_oferta^(1/3))*(r_adjudica^(1/3))))
+)
+
+saveRDS(indice_c_2022,
+        file = paste0(gsub("-", "", today()),
+                      gsub(" ","_"," datos indice agregado_cohorte_2022.rds")))
+
+indice_c_2022 = readRDS(file = "20231218_datos_indice_agregado_cohorte_2022.rds")
+
+
+(
+  indice_plot_c_2022 = ggplot(indice_c_2022, aes(x = fecha)) +
+    geom_line(aes(y = indicador, color = "General"), size = 1) +
+    geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
+    geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
+    geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
+    geom_text(aes(x = fecha, y = indicador, label = round(indicador*100,1)))+
+    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
+    geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta*100,1)))+
+    geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica*100,1)))+
+    labs(title = "Índice de Participación con Perspectiva de Género para todo el sistema, 2022-2023",
+         y = "Índice",
+         x = "Fecha", 
+         color = "Categoría") +
+    theme_minimal()
+)
 
 # OFERENTES DE CADA INSTITUCIÓN DEL ESTADO  ===============================================
 
@@ -699,10 +753,14 @@ medias <- aggregate(indicador ~ `Anio Central`, data = data_index_inst, mean)
   ind_hist = ggplot(data_index_inst, aes(indicador,fill = as.factor(`Anio Central`))) +
     geom_density(alpha = .5) +
 #    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
+<<<<<<< HEAD
     geom_vline(aes(xintercept = indicador, color = `Anio Central`),
                linetype = "dashed", size = 1, data = medias) +
     # geom_text(aes(x = indicador, label = round(indicador, 2)),
     #           vjust = -0.5, data = medias)+
+=======
+    geom_vline(aes(xintercept = mean(indicador, na.rm = TRUE), color = as.factor(`Anio Central`)), linetype = "dashed", linewidth = 1) +
+>>>>>>> 070774396b72ec0643f9ebe0a1a2d20506c51d9c
     labs(title = "Histograma del IPPG",
          x = "IPPG",
          y = "Frecuencia")+
@@ -710,6 +768,7 @@ medias <- aggregate(indicador ~ `Anio Central`, data = data_index_inst, mean)
   
 )
 
+<<<<<<< HEAD
 data_inst <- data_index_inst %>%
   data.table::setDT() %>%
   data.table::dcast(formula = `Organismo`~`Anio Central`
@@ -738,6 +797,34 @@ data_inst <- data_index_inst %>%
          ,`IPPG 2023` = indicador_2023)
 
 write.csv(data_inst, file = "20231218_data_index_inst.csv")
+=======
+# %>% 
+#   data.table::setDT() %>% 
+#   data.table::dcast(formula = `Organismo`~`Anio Central`
+#                     , value.var = c("Hombres.x"
+#                                     , "Mujeres.x"
+#                                     , "r_ofer"
+#                                     , "Hombres.y"
+#                                     , "Mujeres.y"
+#                                     ,"r_adj"
+#                                     , "indicador")) %>%
+#   mutate(var = (indicador_2023-indicador_2022)/indicador_2022) %>% 
+#   rename(`Organismo comprador` = `Organismo`
+#          ,`Oferta Hombres 2022` = Hombres.x_2022
+#          ,`Oferta Hombres 2023` = Hombres.x_2023
+#          ,`Oferta Mujeres 2022` = Mujeres.x_2022
+#          , `Oferta Mujeres 2023` = Mujeres.x_2023
+#          ,`Ratio Oferta 2022` = r_ofer_2022
+#          , `Ratio Oferta 2023` = r_ofer_2023
+#          , `Adjudican Hombres 2022` = Hombres.y_2022
+#          ,`Adjudican Hombres 2023`  = Hombres.y_2023
+#          ,`Adjudican Mujeres 2022` = Mujeres.y_2022
+#          ,`Adjudican Mujeres 2023` = Mujeres.y_2023
+#          ,`Ratio adjudicación 2022` = r_adj_2022
+#          ,`Ratio adjudicación 2023` = r_adj_2023
+#          ,`IPPG 2022` = indicador_2022
+#          ,`IPPG 2023` = indicador_2023)
+>>>>>>> 070774396b72ec0643f9ebe0a1a2d20506c51d9c
 
 saveRDS(data_index_inst, file = "20231218_data_index_inst.rds")
 
