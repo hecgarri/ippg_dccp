@@ -107,7 +107,7 @@ consultar_y_guardar <- function(x,y, window = -11
                         UPPER(C.orgTaxID) [Rut Proveedor]
                         ,C.orgEnterprise [EntCode]
                         ,C.orgLegalName [Razon Social]
-                        ,'Oferta en licitaciones (o convenio Marco)' as [Tipo de participacion]
+                        -- Oferta en licitaciones (o convenio Marco)' as [Tipo de participacion]
                   FROM DCCPProcurement.dbo.prcBIDQuote A with(nolock) 
                   INNER JOIN DCCPProcurement.dbo.prcRFBHeader B with(nolock) ON A.bidRFBCode = B.rbhCode
                   INNER JOIN DCCPPlatform.dbo.gblOrganization C with(nolock) ON A.bidOrganization = C.orgCode
@@ -121,7 +121,7 @@ consultar_y_guardar <- function(x,y, window = -11
                         UPPER(A.proveedorRut) [Rut Proveedor]
                         ,B.orgEnterprise [EntCode]
                         ,B.orgLegalName [Razon Social]
-                        ,'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
+                        -- 'Entrega cotización para una consulta al mercado' as [Tipo de participacion]
                   FROM DCCPProcurement.dbo.prcPOCotizacion A
                   INNER JOIN DCCPPlatform.dbo.gblOrganization B ON A.proveedorRut=B.orgTaxID
                   INNER JOIN DCCPProcurement.dbo.prcPOHeader C ON A.porId = C.porID
@@ -134,7 +134,7 @@ consultar_y_guardar <- function(x,y, window = -11
                   UPPER(B.orgTaxID) [Rut Proveedor]
                   ,COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI [EntCode]
                   ,B.orgLegalName [Razon Social]
-                  ,'Entrega cotización para Compra ágil' as [Tipo de participacion]
+                  --,'Entrega cotización para Compra ágil' as [Tipo de participacion]
                   FROM DCCPCotizacion.dbo.SolicitudCotizacion as SOLI
                   INNER JOIN [DCCPCotizacion].[dbo].[Cotizacion] as COTI ON SOLI.Id = COTI.SolicitudCotizacionId
                   INNER JOIN DCCPPlatform.dbo.gblOrganization B ON COTI.CodigoEmpresa collate Modern_Spanish_100_CI_AI =B.orgEnterprise
@@ -475,42 +475,11 @@ consultar_y_guardar <- function(x,y, window = -11
     
     
     if (depurar){
-      data <- data %>%
-        mutate(tipo_empresa =
-                 ifelse(
-                   !(nchar(`Rut Proveedor`)>9 | nchar(`Rut Proveedor`)<9)
-                   , "Persona Jurídica"
-                   ,ifelse(
-                     !(nchar(`Rut Proveedor`)>9 | nchar(`Rut Proveedor`)<8)
-                     , "Persona Natural", "Ni chicha ni limoná"
-                   )
-                 )
-        ) %>%
-        filter(tipo_empresa!= "Ni chicha ni limoná") %>%
-        mutate(Rut_numero = substr(`Rut Proveedor`,1,nchar(`Rut Proveedor`)-1)
-               ,Rut_dv = substr(`Rut Proveedor`,nchar(`Rut Proveedor`),nchar(`Rut Proveedor`))
-        ) %>%
-        filter(!Rut_numero%like%"[a-z]") %>%
-        mutate(Rut_numero = as.integer(Rut_numero)) %>%
-        filter(!is.na(Rut_numero)) %>%
-        filter(!(Rut_dv!="k" & Rut_dv%like%"[a-z]")) %>%
-        mutate(tipo_empresa = ifelse(
-          Rut_numero> 39999999
-          ,"Persona Jurídica"
-          ,ifelse(
-            Rut_numero< 39999999 & Rut_numero>1000000
-            ,"Persona Natural", tipo_empresa
-          )
-        )
-        ) %>%
-<<<<<<< HEAD
+      data <- data %>% 
+        mutate(sello = ifelse(`Sello Mujer`=="Mujeres",1,0)) %>% 
+        arrange(desc(sello)) %>% 
         filter(!duplicated(EntCode)) %>% 
-        mutate(`Sello Mujer` = ifelse(`Sello Mujer` == "Mujeres",1,0)) %>% 
-        arrange(desc(`Sello Mujer`)) %>% 
-        filter(!duplicated(`Rut Proveedor`))
-=======
-        filter(!duplicated(EntCode))  
->>>>>>> aebdf78dd0ebe71cfdcd484b52ce485bf50d610d
+        select(-sello)
     }
     
     
@@ -564,35 +533,21 @@ years <- c(2022, 2023)
 ofertan_ <-  consultar_y_guardar(wd_path = data_path
                                  , x = 12
                                  , y = years
-                                 ,tipoConsulta = "ofertan" )
-
-ofertan_2 <- consultar_y_guardar(wd_path = data_path
-                                 , x = 12
-                                 , y = years
                                  ,tipoConsulta = "ofertan"
-                                 ,depurar = FALSE)
+                                 , depurar = TRUE)
 
 adjudican_ <-  consultar_y_guardar(wd_path = data_path
                                  , x = 12
                                  , y = years
-                                 ,tipoConsulta = "adjudican" )
-
-adjudican_2 <-  consultar_y_guardar(wd_path = data_path
-                                   , x = 12
-                                   , y = years
-                                   ,tipoConsulta = "adjudican"
-                                   , depurar = FALSE)
+                                 ,tipoConsulta = "adjudican"
+                                 ,depurar = TRUE)
 
 inscritos_ <-  consultar_y_guardar(wd_path = data_path
                                  , x = 12
                                  , y = years
-                                 ,tipoConsulta = "inscritos" )
+                                 ,tipoConsulta = "inscritos"
+                                 ,depurar = TRUE)
 
-inscritos_ <-  consultar_y_guardar(wd_path = data_path
-                                   , x = 12
-                                   , y = years
-                                   ,tipoConsulta = "inscritos"
-                                   ,depurar = FALSE)
 
 inscritos_2022 <- inscritos_ %>% 
   mutate(`Fecha de creación empresa` = as.Date(`Fecha de creación empresa`)) %>% 
@@ -675,7 +630,7 @@ saveRDS(indice,
         file = paste0(gsub("-", "", today()),
                       gsub(" ","_"," datos indice agregado.rds")))
 
-indice = readRDS(file = "20231214_datos_indice_agregado.rds")
+indice = readRDS(file = "20231219_datos_indice_agregado.rds")
 
 
 (
