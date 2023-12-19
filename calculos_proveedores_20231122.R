@@ -503,10 +503,14 @@ consultar_y_guardar <- function(x,y, window = -11
           )
         )
         ) %>%
+<<<<<<< HEAD
         filter(!duplicated(EntCode)) %>% 
         mutate(`Sello Mujer` = ifelse(`Sello Mujer` == "Mujeres",1,0)) %>% 
         arrange(desc(`Sello Mujer`)) %>% 
         filter(!duplicated(`Rut Proveedor`))
+=======
+        filter(!duplicated(EntCode))  
+>>>>>>> aebdf78dd0ebe71cfdcd484b52ce485bf50d610d
     }
     
     
