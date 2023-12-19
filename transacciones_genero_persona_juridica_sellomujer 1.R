@@ -12,14 +12,16 @@ library(sqldf)
 library(data.table)
 
 
-con <- odbcConnect("DW", uid = "datawarehouse", pwd = "datawarehouse")
-con1 <- odbcConnect("Aquiles", uid = "datawarehouse", pwd = "datawarehouse")
-setwd("C:\\Users\\cl15002627k\\AirflowCodes\\R-Studio\\MEI_Mujer")
+con <- odbcConnect("dw", uid = "datawarehouse", pwd = "datawarehouse")
+con1 <- odbcConnect("aq", uid = "datawarehouse", pwd = "datawarehouse")
+
+
+#setwd("C:\\Users\\cl15002627k\\AirflowCodes\\R-Studio\\MEI_Mujer")
 
 
 
 fecha <- Sys.Date()-months(1)
-año <- as.integer(format(fecha, "%Y"))
+anio <- as.integer(format(fecha, "%Y"))
 mes <- as.integer(format(fecha, "%m"))
 fechaAct <- gsub("-","",Sys.Date())
 
@@ -36,7 +38,7 @@ if(mes <10){
 # 	  (([TipoSello]= 3 and persona =1) or  -- persona natural con sello mujer
 # 		  ([TipoSello]= 3 and 
 #       persona=2 and
-#       year(FechaCaducidad) >= 2023 )) --Persona jurídica con sello mujer vigente durante el año de consulta ")
+#       year(FechaCaducidad) >= 2023 )) --Persona jurnidica con sello mujer vigente durante el anio de consulta ")
 
 #Proveedores con sello mujer Solo RUT
 PSM <- sqlQuery(con1,"  select distinct s.entcode,
@@ -47,11 +49,11 @@ PSM <- sqlQuery(con1,"  select distinct s.entcode,
 	  (([TipoSello]= 3 and persona =1) or  -- persona natural con sello mujer
 		  ([TipoSello]= 3 and 
       persona=2 and
-      year(FechaCaducidad) >= 2023 )) --Persona jurídica con sello mujer vigente durante el año de consulta ")
+      year(FechaCaducidad) >= 2023 )) --Persona jurnidica con sello mujer vigente durante el anio de consulta ")
 
 #query
 txt1 <-  paste0("select 
-    t.year Año
+    t.year Anio
    ,t.month Mes
     ,p.entcode 
     ,LOWER(replace(replace(p.rutsucursal,'.',''),'-','')) RUTsucursal
@@ -63,7 +65,7 @@ FROM DM_transaccional.dbo.THOrdenesCompra OC INNER JOIN
 DM_transaccional.dbo.DimProveedor p on p.IDSucursal=oc.IDSucursal inner join
 DM_transaccional.dbo.DimTiempo T ON OC.[IDFechaEnvioOC] = T.DateKey
 
-  where t.year=", año," --and t.month=",mes,"
+  where t.year=", anio," --and t.month=",mes,"
                 group by  t.year,t.month,p.entcode,p.rutsucursal")
 
 
@@ -120,7 +122,7 @@ provP <- provP[!duplicated(provP$entcode),]
 
 
 #union entre proveedores sello mujer con montos transados
-montosPSM <- sqldf("select a.Año,
+montosPSM <- sqldf("select a.Anio,
                            a.Mes,
                            a.RUTsucursal,
                           -- a.entcode,
@@ -133,7 +135,7 @@ montosPSM <- sqldf("select a.Año,
                     from montosMP a left join
                           PSM b on a.RUTsucursal=b.RUT left join --a.entcode=b.entcode left join
                           provP p on p.entcode=a.entcode
-                   group by a.Año,
+                   group by a.Anio,
                            a.Mes,
                           a.RUTsucursal, --a.entcode,
                          --  case b.SelloMujer when '1' then 1 else 0 end ,
@@ -142,7 +144,7 @@ montosPSM <- sqldf("select a.Año,
 
 #A todos los proveedores sin sello se asigna el valor 0 en el campo SelloMujer
 montosPSM$SelloMujer[is.na(montosPSM$SelloMujer)] <- 0
-#Proveedores sin RUT válido se asigna valor "SinInfo"
+#Proveedores sin RUT vnilido se asigna valor "SinInfo"
 montosPSM$Persona[which(is.na(montosPSM$Persona))] <- 'SinInfo'
 
 
@@ -167,7 +169,7 @@ montosPSM$Persona[which(is.na(montosPSM$Persona))] <- 'SinInfo'
 
 
 #enlistar RUTs y entcode y eliminar RUTs duplicados. Se prefiere el entcode que tenga sello mujer.
-#Desde esta tabla se seleccionarán los entcode que saldrán en el reporte final
+#Desde esta tabla se seleccionarnin los entcode que saldrnin en el reporte final
 
 entcodeRUT <- select(montosMP,
                      entcode,
@@ -245,14 +247,14 @@ montosPSM <- sqldf(" select a.*,
 # 
 # #Datos de montos por mes para RUTs duplicados agrupados (suma de montos)
 # montosPSM_RD_agrup <- montosPSM_RD %>%
-#                         group_by(Año,Mes,Persona,RUT)%>%
+#                         group_by(Anio,Mes,Persona,RUT)%>%
 #                         summarise(MontoTotalUSD=sum(MontoTotalUSD),
 #                                   MontoTotalCLP=sum(MontoTotalCLP),
 #                                   CantOC=sum(CantOC))
 # 
 # 
 # montosPSM_RD_agrup2 <- sqldf("
-#                              select B.Año,
+#                              select B.Anio,
 #                                     B.Mes,
 #                                     A.entcode,
 #                                     A.SelloMujer,
@@ -294,7 +296,7 @@ montosPSM <- sqldf(" select a.*,
 #montosPSM <- montosPSM[!montosPSM$Mes==10,]
 ##########################################################
 #Escribir y cargar datos
-nombre <- paste0("transacciones_sello_mujer_",año,mesC)
+nombre <- paste0("transacciones_sello_mujer_",anio,mesC)
 nombreCSV <- paste0(nombre,".csv")
 nombreZIP <- paste0(nombre,".zip")
 

@@ -65,7 +65,10 @@ detalles = function(path = wd_path, pattern = "*.rds"){
 }
 
 
-consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta = "ofertan", x, y) {
+consultar_y_guardar <- function(x,y, window = -11
+                                ,wd_path = data_path
+                                ,tipoConsulta = "ofertan"
+                                ,depurar = TRUE) {
   
   if (length(years) == 0 || !tipoConsulta %in% c('ofertan'
                                                  , 'adjudican'
@@ -140,7 +143,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                 	)
                 	
                 	SELECT DISTINCT
-                      T.[Rut Proveedor]
+                      LOWER(REPLACE(REPLACE(T.[Rut Proveedor],'.',''),'-','')) [Rut Proveedor]
                       ,T.EntCode
                       ,T.[Razon Social]
                       , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
@@ -174,7 +177,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                   /*Reciben una orden de compra*/
                     
                     SELECT DISTINCT 
-                    UPPER(O.orgTaxID)  [Rut Proveedor]
+                    LOWER(REPLACE(REPLACE(O.orgTaxID,'.',''),'-','')) [Rut Proveedor] 
                     , O.orgEnterprise [EntCode]
                     , C.entName [Razon Social]
                     ,(CASE WHEN S.TipoSello=3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
@@ -188,9 +191,10 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                   INNER JOIN DCCPPlatform.dbo.gblEnterprise C with(nolock) ON O.orgEnterprise = C.entCode
                   LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
                             FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                            WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                            WHERE EntCode NOT IN ('N/A') AND
+                            ((s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
                             (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                            (year(s.fechacreacion)<= @YEAR)
+                            (year(s.fechacreacion)<= @YEAR))
                             ) s on C.EntCode collate Modern_Spanish_CI_AI =s.EntCode
                   WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
                     (A.porSendDate < @endDate) AND
@@ -213,7 +217,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                   , @endDate datetime = dateadd(month, +1, @currentMonth);
                   
                   SELECT DISTINCT
-                      UPPER([orgTaxID]) as [Rut Proveedor]
+                       LOWER(REPLACE(REPLACE([orgTaxID],'.',''),'-','')) [Rut Proveedor]
                       ,[orgEnterprise] [EntCode]
                       ,UPPER([orgLegalName]) as [Razon Social]
                       , (CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
@@ -224,9 +228,10 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                   FROM [DCCPPlatform].[dbo].[gblOrganization] O
                   LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
                           FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                          WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                          WHERE EntCode NOT IN ('N/A') AND
+                          ((s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
                           (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                          (year(s.fechacreacion)<= @YEAR)
+                          (year(s.fechacreacion)<= @YEAR))
                           ) s on O.orgEnterprise=s.EntCode collate Modern_Spanish_CI_AI
                   WHERE orgCreationDate  <= @endDate 
                       AND orgClass = 1 -- proveedores o proveedoras
@@ -252,7 +257,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                     , @endDate datetime = dateadd(month, +1, @currentMonth);
 
                 SELECT
-                UPPER([orgTaxID]) as [Rut Proveedor]
+                 LOWER(REPLACE(REPLACE([orgTaxID],'.',''),'-','')) [Rut Proveedor]
                 ,O.orgEnterprise [EntCode]
                 ,UPPER(E.entname) [Razon social]
                 ,(CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
@@ -271,9 +276,10 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                 LEFT JOIN   [DCCPPlatform].[dbo].gblEnterprise  as E  ON O.orgEnterprise         = E.entcode
                 LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
                 FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                WHERE EntCode NOT IN ('N/A') AND
+			        	((s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
                 (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
+                (year(s.fechacreacion)<= @YEAR))
                 ) s on E.entcode=s.EntCode collate Modern_Spanish_CI_AI
                 WHERE  U.usrIsActive       = 1
                 AND O.orgIsActive   = 1
@@ -383,7 +389,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
             	
             	SELECT DISTINCT
             	    UPPER(T.Organismo) [Organismo]
-                  ,T.[Rut Proveedor]
+                  ,LOWER(REPLACE(REPLACE(T.[Rut Proveedor],'.',''),'-','')) [Rut Proveedor]
                   ,T.EntCode
                   --,T.[Razon Social]
                   , (CASE s.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
@@ -395,9 +401,10 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
             	FROM TEMP T
             	LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
                 FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                WHERE EntCode NOT IN ('N/A') AND
+				        ((s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
                 (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                (year(s.fechacreacion)<= @YEAR)
+                (year(s.fechacreacion)<= @YEAR))
                 ) s on T.EntCode=s.EntCode
                        "
   				      ,x,y,window)
@@ -420,7 +427,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                   
                   SELECT DISTINCT 
                   UPPER(E.entName) [Organismo]  
-                  , O.orgTaxID [Rut Proveedor]
+                  , LOWER(REPLACE(REPLACE(O.orgTaxID,'.',''),'-','')) [Rut Proveedor]
                   , O.orgEnterprise [EntCode] -- Código Empresa
                   , D.orgEnterprise [OrgCode] -- Código Institución 
                   , C.entName [Razon Social]
@@ -438,9 +445,10 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                 INNER JOIN DCCPPlatform.dbo.gblEnterprise E ON D.orgEnterprise=E.entCode
                 LEFT JOIN (SELECT distinct s.EntCode, s.TipoSello
                           FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                          WHERE (s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
+                          WHERE EntCode NOT IN ('N/A') AND 
+                          ((s.[TipoSello]= 3 and s.persona =1) or  -- persona natural con sello mujer
                           (s.[TipoSello]= 3 and s.persona=2 and year(s.FechaCaducidad) >= @YEAR) and
-                          (year(s.fechacreacion)<= @YEAR)
+                          (year(s.fechacreacion)<= @YEAR))
                           ) s on C.EntCode collate Modern_Spanish_CI_AI =s.EntCode
                 WHERE (A.porBuyerStatus IN (4, 5, 6, 7, 12)) AND /* Estados que validan una OC*/
                   (A.porSendDate < @endDate) AND
@@ -461,9 +469,44 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
                   )
   
   
-  descargar_guardar <- function(x, y) {
+  descargar_guardar <- function(x, y, window) {
     
-    data <- ejecutarConsulta(x = x, y = y, window = window)
+    data <- ejecutarConsulta(x = x, y = y, window = window) 
+    
+    
+    if (depurar){
+      data <- data %>%
+        mutate(tipo_empresa =
+                 ifelse(
+                   !(nchar(`Rut Proveedor`)>9 | nchar(`Rut Proveedor`)<9)
+                   , "Persona Jurídica"
+                   ,ifelse(
+                     !(nchar(`Rut Proveedor`)>9 | nchar(`Rut Proveedor`)<8)
+                     , "Persona Natural", "Ni chicha ni limoná"
+                   )
+                 )
+        ) %>%
+        filter(tipo_empresa!= "Ni chicha ni limoná") %>%
+        mutate(Rut_numero = substr(`Rut Proveedor`,1,nchar(`Rut Proveedor`)-1)
+               ,Rut_dv = substr(`Rut Proveedor`,nchar(`Rut Proveedor`),nchar(`Rut Proveedor`))
+        ) %>%
+        filter(!Rut_numero%like%"[a-z]") %>%
+        mutate(Rut_numero = as.integer(Rut_numero)) %>%
+        filter(!is.na(Rut_numero)) %>%
+        filter(!(Rut_dv!="k" & Rut_dv%like%"[a-z]")) %>%
+        mutate(tipo_empresa = ifelse(
+          Rut_numero> 39999999
+          ,"Persona Jurídica"
+          ,ifelse(
+            Rut_numero< 39999999 & Rut_numero>1000000
+            ,"Persona Natural", tipo_empresa
+          )
+        )
+        ) %>%
+        filter(!duplicated(EntCode))  
+    }
+    
+    
     # Guarda el objeto data en un archivo con nombre diferente según el tipo de consulta
     saveRDS(data, file = paste0(gsub("-", "", today()), gsub(" ", "_", tipoConsulta), " en algún procedimiento de compra ", y, ".rds"))
     
@@ -478,8 +521,9 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
       start <- Sys.time()
       x <- month(today()) - 1
       y <- year
+      window<- -(x-1)
       
-      data <- descargar_guardar(x, y)
+      data <- descargar_guardar(x, y, window)
       total <- rbind(total, data)
       
       end <- Sys.time()
@@ -491,7 +535,7 @@ consultar_y_guardar <- function(wd_path = data_path, window = -11, tipoConsulta 
       start <- Sys.time()
       y <- year
       
-      data <- descargar_guardar(x, y)
+      data <- descargar_guardar(x, y, window)
       total <- rbind(total, data)
       
       end <- Sys.time()
@@ -514,6 +558,12 @@ ofertan_ <-  consultar_y_guardar(wd_path = data_path
                                  , x = 12
                                  , y = years
                                  ,tipoConsulta = "ofertan" )
+
+ofertan_2 <- consultar_y_guardar(wd_path = data_path
+                                 , x = 12
+                                 , y = years
+                                 ,tipoConsulta = "ofertan"
+                                 ,depurar = FALSE)
 
 adjudican_ <-  consultar_y_guardar(wd_path = data_path
                                  , x = 12
