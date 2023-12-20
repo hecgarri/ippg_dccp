@@ -17,18 +17,57 @@ packages = c("tidyverse", "RODBC", "plotly", "data.table", "formattable")
 load_pkg(packages)
 
 
-# #Establece conexiones a los diferentes servidores 
-# 
-# #con = RODBC::odbcConnect("aquiles", uid = "datawarehouse", pwd = "datawarehouse") #TIVIT
+#
+# # #Establece conexiones a los diferentes servidores 
+# con = RODBC::odbcConnect("aquiles", uid = "datawarehouse", pwd = "datawarehouse") #TIVIT
 
 con2 = RODBC::odbcConnect("aq", uid = "datawarehouse", pwd = "datawarehouse") #Aquiles
 
 con3 = RODBC::odbcConnect("dw", uid = "datawarehouse", pwd = "datawarehouse") #Datawarehouse
 
+con4 = RODBC::odbcConnect("dwh", uid = "datawarehouse", pwd ="datawarehouse") #DataWareHouse Histórico
+
 # #Queries =====================
 # 
 # 
 stats_oc_by_seal <- function(x,y, window = -12){
+  sqlQuery(con4,sprintf("
+              DECLARE @MONTH AS INT;          
+              DECLARE @ANIO AS INT;
+              
+              SET @MONTH = %s;
+              SET @ANIO = %s;
+              
+              DECLARE @CURRENTMONTH datetime = datetimefromparts(@ANIO, @MONTH,1,0,0,0,0);
+              DECLARE @startDate datetime = dateadd(month,%s, @CURRENTMONTH)
+                , @endDate datetime = dateadd(month,1,@currentMonth);
+
+              SELECT T.year 'Año'
+              ,(CASE  WHEN sp.Id_Tipo_Sello = 3 THEN 'Mujeres' ELSE 'Hombres' END)  [Sello Mujer]
+              ,SUM(OC.MontoUSD+OC.ImpuestoUSD)/1000000 [Monto anual USD]
+              ,COUNT(DISTINCT OC.porID) [Cantidad OC]
+              FROM [DM_Transaccional_2022].[dbo].[THOrdenesCompra] OC
+              INNER JOIN [DM_Transaccional_2022].[dbo].[DimProveedor] p on p.IDSucursal=oc.IDSucursal
+              INNER JOIN [DM_Transaccional_2022].[dbo].[DimTiempo] T ON T.DateKey=OC.IDFechaEnvioOC
+              INNER JOIN [DM_Transaccional_2022].[dbo].[DimComprador] C ON OC.IDUnidaddeCompra=C.IDUnidaddeCompra
+              INNER JOIN [DM_Transaccional_2022].[dbo].[DimInstitucion] I ON C.entCode=I.entCode
+              LEFT JOIN (select distinct SP.EntCode, SP.Id_Tipo_Sello
+                                       from [10.34.71.202].[DM_RegistroProveedores].[dbo].[Sello_Proveedor] SP
+                                       where (SP.[Id_Tipo_Sello]= 3) or  -- persona natural con sello mujer
+                                      (SP.[Id_Tipo_Sello]= 3 and year(SP.Fecha_Caducidad) >= @ANIO) and
+                                        (year(SP.Fecha_Creacion)<= @ANIO)
+                                        ) SP on SP.EntCode = cast(p.entcode as nvarchar(50))
+              WHERE T.year >= @ANIO
+              GROUP BY T.year, sp.Id_Tipo_Sello
+              ",x,y,window)
+)
+  
+} 
+
+q_1.1 = stats_oc_by_seal(x = 12, y = 2022)
+
+
+stats_oc_by_seal2 <- function(x,y, window = -12){
   sqlQuery(con3,sprintf("
               DECLARE @MONTH AS INT;          
               DECLARE @ANIO AS INT;
@@ -45,7 +84,7 @@ stats_oc_by_seal <- function(x,y, window = -12){
               ,SUM(OC.MontoUSD+OC.ImpuestoUSD)/1000000 [Monto anual USD]
               ,COUNT(DISTINCT OC.porID) [Cantidad OC]
               FROM [DM_Transaccional].[dbo].[THOrdenesCompra] OC
-              INNER JOIN DM_Transaccional.dbo.DimProveedor p on p.IDSucursal=oc.IDSucursal
+              INNER JOIN [DM_Transaccional].[dbo].[DimProveedor] p on p.IDSucursal=oc.IDSucursal
               INNER JOIN [DM_Transaccional].[dbo].[DimTiempo] T ON T.DateKey=OC.IDFechaEnvioOC
               INNER JOIN [DM_Transaccional].[dbo].[DimComprador] C ON OC.IDUnidaddeCompra=C.IDUnidaddeCompra
               INNER JOIN [DM_Transaccional].[dbo].[DimInstitucion] I ON C.entCode=I.entCode
@@ -58,16 +97,15 @@ stats_oc_by_seal <- function(x,y, window = -12){
               WHERE T.year >= @ANIO
               GROUP BY T.year, sp.Id_Tipo_Sello
               ",x,y,window)
-)
+  )
   
-} 
+}
 
-q_1 = stats_oc_by_seal(x = 12, y = 2022)
+q_1.2 = stats_oc_by_seal2(x = 12, y = 2023)
 
+q_1 <- rbind(q_1.1,q_1.2)
 
 saveRDS(q_1, file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds")
-
-
 
 q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds")
 
@@ -270,20 +308,41 @@ f_4 = function(x,y, window){
   )
 }
 
+t_4 <- list()
 
-t_4 <- lapply(c(2022,2023), function(y) f_4(x = 12, y, window = -11) %>% 
-                mutate(anio = y)) 
+t_4[[1]] <- sqlQuery(con2, "-- Proveedores participando 2022 (cuenta pública)
+                            SELECT distinct [transan] collate Modern_Spanish_CI_AI as [transan]
+                            FROM [Estudios].[dbo].[proveedores_participando_2022_z] t
+                            LEFT JOIN (SELECT DISTINCT
+                            s.entcode as Transan
+                            ,s.TipoSello
+                            FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                            WHERE
+                            (s.[TipoSello] = 3 and s.persona = 1) or  -- persona natural
+                            (s.[TipoSello] = 3 and s.persona = 2
+                            and year(s.FechaCaducidad) >= 2022
+                            and year(s.fechacreacion) <= 2022)    -- persona juridica
+                            ) s on s.Transan collate Modern_Spanish_CI_AI = t.Transan
+                        GROUP BY s.TipoSello")
 
-saveRDS(t_4, file = "t_4.rds")
 
-# q_4 = q_4 %>%
-#   mutate(TipoSello = ifelse(!is.na(TipoSello),"Mujeres", "Hombres")) %>%
-#   ungroup() %>%
-#   mutate(total = sum(Proveedores),
-#          prop = (Proveedores/total)*100) %>%
-#   select(-total)
-# 
-# saveRDS(q_4, file = "sello_proveedores.rds")
+t_4[[2]] <- f_4(x= 11, y = 2023, window = -10) %>% mutate(anio = 2023)
+
+wd_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos/"
+
+saveRDS(t_4, file = paste0(wd_path, "t_4.rds"))
+
+t_4 <- rbind(t_4[[1]],t_4[[2]])
+
+t_4 = t_4 %>%
+  group_by(anio) %>%
+  mutate(total = sum(Proveedores),
+         prop = (Proveedores/total)*100) %>%
+  select(-total)
+
+wd_path = "C:/o/OneDrive - DCCP/Escritorio/Proyectos/IPPG en Mercado Público/datos/"
+
+saveRDS(t_4, file = paste0(wd_path,"sello_proveedores.rds"))
 
 
 # q_4 = readr::read_rds(file = "sello_proveedores.rds")

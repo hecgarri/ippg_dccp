@@ -18,15 +18,17 @@ load_pkg <- function(pack){
   sapply(pack, require, character.only = TRUE)
 }
 
-packages = c("tidyverse" #Conjunto integral de paquetes para manipular y analizar datos de manera coherente y eficiente.
-             , "RODBC" #facilita la conexión y manipulación de bases de datos a través de ODBC (Open Database Connectivity).
-             , "plotly" #proporciona herramientas interactivas para la creación de gráficos dinámicos y visualizaciones interactivas
-             , "data.table" #Paquete optimizado para manipulación eficiente de grandes conjuntos de datos, destacando por su velocidad y funcionalidades avanzadas.
-             , "formattable"
-             , "hutils"
-             , "readr"
-             , "VennDiagram"
-             , "RColorBrewer")
+packages = c("tidyverse" # Conjunto integral de paquetes para manipular y analizar datos de manera coherente y eficiente.
+             , "RODBC" # Facilita la conexión y manipulación de bases de datos a través de ODBC (Open Database Connectivity).
+             , "plotly" # Proporciona herramientas interactivas para la creación de gráficos dinámicos y visualizaciones interactivas.
+             , "data.table" # Paquete optimizado para la manipulación eficiente de grandes conjuntos de datos, destacando por su velocidad y funcionalidades avanzadas.
+             , "formattable" # Permite dar formato a tablas de datos de manera elegante, facilitando la presentación visual de la información.
+             , "hutils" # Contiene funciones de utilidad diversas para simplificar tareas comunes en análisis de datos y programación.
+             , "readr" # Ofrece funciones eficientes para la lectura de datos en R, facilitando la importación de diversos formatos de archivos.
+             , "VennDiagram" # Permite la creación de diagramas de Venn para visualizar las intersecciones entre conjuntos de datos.
+             , "RColorBrewer" # Proporciona paletas de colores predefinidas y de alta calidad para mejorar la estética de los gráficos en R.
+             )
+             
 
 load_pkg(packages)
 
@@ -431,7 +433,7 @@ consultar_y_guardar <- function(x,y, window = -11
                   , O.orgEnterprise [EntCode] -- Código Empresa
                   , D.orgEnterprise [OrgCode] -- Código Institución 
                   , C.entName [Razon Social]
-                  ,(CASE S.TipoSello WHEN 3 THEN 1 ELSE 0 END) [Sello Mujer]
+                  ,(CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
                   , COUNT(DISTINCT A.porID) [Cantidad OC]
                   , @MONTH [Mes Central]
                   , @YEAR [Anio Central]
@@ -473,13 +475,27 @@ consultar_y_guardar <- function(x,y, window = -11
     
     data <- ejecutarConsulta(x = x, y = y, window = window) 
     
+    grupo1 = c('ofertan'
+              , 'adjudican'
+              ,'login'
+              ,'inscritos')
     
     if (depurar){
-      data <- data %>% 
-        mutate(sello = ifelse(`Sello Mujer`=="Mujeres",1,0)) %>% 
-        arrange(desc(sello)) %>% 
-        filter(!duplicated(EntCode)) %>% 
-        select(-sello)
+      if (tipoConsulta%in%grupo1){
+        data <- data %>% 
+          mutate(sello = ifelse(`Sello Mujer`=="Mujeres",1,0)) %>% 
+          arrange(desc(sello)) %>% 
+          filter(!duplicated(EntCode)) %>% 
+          select(-sello)
+      } else {
+        data <- data %>% 
+          mutate(sello = ifelse(`Sello Mujer`=="Mujeres",1,0)
+                 ,codigo = paste0(Organismo,EntCode)) %>% 
+          group_by(Organismo) %>% 
+          arrange(desc(sello)) %>% 
+          filter(!duplicated(codigo)) %>% 
+          select(-sello)
+      }
     }
     
     
@@ -630,7 +646,7 @@ saveRDS(indice,
         file = paste0(gsub("-", "", today()),
                       gsub(" ","_"," datos indice agregado.rds")))
 
-indice = readRDS(file = "20231219_datos_indice_agregado.rds")
+#indice = readRDS(file = "20231219_datos_indice_agregado.rds")
 
 
 (
@@ -682,7 +698,7 @@ saveRDS(indice_c_2022,
         file = paste0(gsub("-", "", today()),
                       gsub(" ","_"," datos indice agregado_cohorte_2022.rds")))
 
-indice_c_2022 = readRDS(file = "20231218_datos_indice_agregado_cohorte_2022.rds")
+indice_c_2022 = readRDS(file = "20231220_datos_indice_agregado_cohorte_2022.rds")
 
 
 (
@@ -713,6 +729,7 @@ ofertan_inst <-  consultar_y_guardar(wd_path = data_path
 
 
 saveRDS(ofertan_inst, file = "20231215_institución_recibe_una_oferta.rds")
+
 # PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA DE CADA INSTITUCIÓN DEL ESTADO ===========================
 
 years <- c(2022, 2023)

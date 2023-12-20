@@ -1,6 +1,9 @@
 ---
-title: "Cuaderno de Laboratorio: Índice de Participación con Perspectiva de Género"
-output: github_document
+title: Minuta de resultados preliminares Índice de Participación con Perspectiva de
+  Género en Compras Públicas
+author: "División de Estudios - Dirección ChileCompra"
+date: "`r Sys.Date()`"
+output: pdf_document
 ---
 
 
@@ -166,171 +169,36 @@ grid.arrange(plot_1_1, plot_1_2, ncol = 2)
 
 Este gráfico revela que, aunque las variaciones en la cantidad de órdenes de compra y montos transados entre ambos períodos son mínimas, se observa una mejora sutil en la participación en los montos. Esta mejora es evidente al pasar del 17% en 2022 al 19.7% para las mujeres. Es especialmente notable considerando que, a pesar de que el año 2023 aún no ha concluido, se aprecia un volumen total transado muy similar al año anterior.
 
-## Monto y cantidad de órdenes de compra según procedimiento de compra
-
-```{r, eval=TRUE, echo=FALSE}
-
-q_3 = readr::read_rds(file = "q3_monto_cantidad_oc_segun_tipo_OC.rds")
-
-
-# Define los colores para "Hombres" y "Mujeres"
-colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
 
 
 
-plot_3_1 = grafico_barras(data = q_3, y = `Monto anual USD`,
-                        z = `Procedimiento`, fill = `Sello Mujer`,
-                        colores = colores, scales = "free", 
-                        formato_dolar = "scales")
-
-plot_3_2 = grafico_barras(data = q_3, y = `Cantidad OC`,
-                        z = `Procedimiento`, fill = `Sello Mujer`,
-                        colores = colores, scales = "free", 
-                        formato_dolar = "custom")
-
-grid.arrange(plot_3_1, plot_3_2, ncol = 2)
-
-
-
-
-# kable(
-#   q_3,
-#   col.names = c("Año", "Sello Mujer", "Tipo de Orden de Compra", "Monto ANUAL MM USD", "Cantidad Órdenes de compra"),
-#   digits = 2,
-#   caption = "Monto total (MM USD) y  Órdenes de Compra por sexo de quien lidera la empresa y tipo de Orden de Compra, 2022-2023"
-#   ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
-#   footnote(
-#     general = "Elaboración propia a partir de datos de ChileCompra",
-#     general_title = "Nota:",
-#     footnote_as_chunk = TRUE
-#     )
-
-```
-
-
-<span style="color: red;"> Aunque es interesante realizar una apertura por procedimiento de compra, este gráfico no refleja adecuadamente la realidad pues no puede ser que el % de participación de las empresas lideradas por mujeres sea inferior en todos los procedimientos de compra en relación con el total. Por lo tanto debo verificar que la query está bien construida. Revisar archivo 'indicadores_complementarios_20231213' </span>
-
-
-## Instituciones según importancia de empresas lideradas por mujeres 
-
-```{r,warning=FALSE, eval=TRUE, echo=FALSE}
-q_2 = readr::read_rds(file = "q2_monto_cantidad_oc_segun_sello_institucion.rds") %>% 
-  setDT() %>% 
-  data.table::dcast(formula = NombreInstitucion ~ Sello,
-                    value.var = c("Monto anual USD", "Cantidad OC")) %>% 
-  arrange(desc(`Monto anual USD_Mujeres`)) %>% 
-  mutate(total_oc = `Cantidad OC_Hombres`+`Cantidad OC_Mujeres`,
-         perc_muj=`Cantidad OC_Mujeres`/total_oc,
-         total_usd = `Monto anual USD_Mujeres`+`Monto anual USD_Hombres`,
-         perc_usd = `Monto anual USD_Mujeres`/total_usd)
-  
-
-
-(
-  oc_perc_plot = ggplot(q_2, aes(x = perc_muj, y = `perc_usd`, size = total_usd)) +
-    geom_point() +
-    geom_vline(xintercept = mean(q_2$perc_muj,na.rm = TRUE), linetype = "dashed", color = "blue", linewidth = 1) +
-    geom_hline(yintercept = mean(q_2$perc_usd,na.rm = TRUE), linetype = "dashed", color = "red", linewidth = 1) +
-    labs(title = "Participación de las mujeres en OC y Montos",
-         x = "Porcentaje OC's",
-         y = "porcentaje Monto OC's",
-         size = "Monto OC's") +
-    theme_minimal()
-)
-
-
-
-```
-
-Frente al hecho de que nuestro indicador puede arrojar valores no *convencionales* cuando una institución emite pocas órdenes de compra, es que decidimos realizar un zoom a aquellas instituciones en que podemos observar que del total de órdenes de compra, el porcentaje asignado a empresas lideradas por mujeres es mayor que la media y asimismo, aquellas en que el porcentaje asignado en términos de montos es superior a la media. Este criterio nos permitió identificar aquellas empresas que pertenecen al cuadrante 1. 
-
-## Los principales compradores del primer cuadrante para las empresas con Sello Mujer
-
-
-```{r, echo = FALSE}
-
-cuad_1 = q_2 %>% 
-  mutate(media_x=mean(perc_muj,na.rm = TRUE),
-         media_y = mean(perc_usd,na.rm = TRUE)) %>% 
-  filter(perc_muj> media_x & perc_usd>media_y) %>%
-  arrange(desc(`Monto anual USD_Mujeres`)) %>% 
-  mutate(monto_mujeres = `Monto anual USD_Mujeres`)
-
-cuad_1_long <- tidyr::pivot_longer(cuad_1 %>% 
-  arrange(desc(`Monto anual USD_Mujeres`)), cols = c(`Monto anual USD_Hombres`, `Monto anual USD_Mujeres`), names_to = "Genero", values_to = "Monto") %>% 
-  arrange(desc(monto_mujeres))
-
-
-
-# Define los colores para "Hombres" y "Mujeres"
-colores <- c("Monto anual USD_Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Monto anual USD_Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
-
-
-# Crear el gráfico apilado
-cuad_plot_1 <- ggplot(cuad_1_long[1:20,], aes(x = reorder(NombreInstitucion, monto_mujeres), y = Monto, fill = Genero)) +
-  geom_bar(stat = "identity", position = "dodge", color = "black") +
-    scale_fill_manual(values = colores)+
-  labs(title = "Monto transado por Institución", y = "Cantidad")+
-  geom_text(data = cuad_1_long[1:20, ],
-            aes(label = scales::comma(round(Monto)), y = Monto),
-            position = position_dodge(width = 1),  # Ancho de la posición dodge
-            vjust = 0.5)+
-  theme_minimal()+
-  coord_flip()+
-  labs(x = "Instituciones", y = "Monto en millones de dólares")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
-    theme(legend.position = "none")
-
-cuad_1 = q_2 %>% 
-  mutate(media_x=mean(perc_muj,na.rm = TRUE),
-         media_y = mean(perc_usd,na.rm = TRUE)) %>% 
-  filter(perc_muj> media_x & perc_usd>media_y) %>% 
-  mutate(cantidad_mujeres = `Cantidad OC_Mujeres`)
-
-cuad_1_long <- tidyr::pivot_longer(cuad_1 %>% 
-  arrange(desc(`Cantidad OC_Mujeres`)), cols = c(`Cantidad OC_Hombres`, `Cantidad OC_Mujeres`), names_to = "Genero", values_to = "OCs") 
-
-colores <- c("Cantidad OC_Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Cantidad OC_Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
-
-
-# Crear el gráfico apilado
-cuad_plot_2 <- ggplot(cuad_1_long[1:20,], aes(x = reorder(NombreInstitucion, cantidad_mujeres), y = OCs, fill = Genero)) +
-  geom_bar(stat = "identity", position = "dodge", color = "black") +
-    scale_fill_manual(values = colores)+
-  labs(title = "Cantidad de órdenes de compra por institución", y = "Cantidad")+
-  geom_text(data = cuad_1_long[1:20, ],
-            aes(label = scales::comma(round(OCs)), y = OCs),
-            position = position_dodge(width = 1),  # Ancho de la posición dodge
-            vjust = 0.5)+
-  theme_minimal()+
-  coord_flip()+
-  labs(x = "Instituciones", y = "Cantidad de órdenes de compra")+
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 20))+
-    theme(legend.position = "none")
-
-
-
-grid.arrange(cuad_plot_1, cuad_plot_2, ncol = 2)
-
-```
-
-
-Posteriormente, procedimos a mostrar un ranking de aquellas instituciones pertenecientes al cuadrante 1, en la que identificamos que en materia de montos destacan los municipios, mientras que en materia de cantidad de órdenes de compra, el ranking parece estar liderada por instituciones del sector salud. 
-
-Este es un hallazgo interesante en el que se puede profundizar más adelante. 
-
-## Cantidad y Tasa de Participación de proveedoras en el sistema
+## Cantidad de empresas proveedoras según sello
 
 ```{r, eval=TRUE, echo=FALSE, warning=FALSE}
-
-t_4 <- readr::read_rds(file = paste0(wd_path,"t_4.rds"))
-
+q_4 = readr::read_rds(file = "sello_proveedores.rds") %>% 
+  mutate(Sello = formattable::comma(Sello, decimal.mark = ",", big.mark = "."), 
+         prop = formattable::comma(prop, decimal.mark = ",", big.mark = ".")) 
 
 colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
              "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
+
+
+  p_4<- ggplot(q_4, aes(x = reorder(`Sello Mujer`, -Sello), y = `Sello`, fill = `Sello Mujer`)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = colores)+
+   geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
+   geom_text(aes(label = paste0(round(Sello, 0))), position = position_stack(vjust = 1.05))+
+  labs(title = "Empresas con Sello mujer 2022",
+       x = "Sello Mujer",
+       y = "Cantidad proveedores",
+       caption = "Elaboración propia a partir de datos de ChileCompra") +
+  theme_minimal() +
+  theme(legend.position = "top")
+
+
+
+t_4 <- readr::read_rds(file = "t_4.rds")
+
 
 p_42 <- ggplot(t_4[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
   geom_bar(stat = "identity", color = "black") +
@@ -374,14 +242,16 @@ grid.arrange(p_41, p_42, ncol = 2)
 
 ```
 
-De este cuadro se desprende que entre los años 2022 y 2023 se puede apreciar un aumento importante de proveedores activos en general en Mercado Público, con un aumento del 43% al pasar de 96.434 en 2022 a 138.509 en 2023. 
+De este cuadro se desprende un notable aumento en el número de proveedores activos en Mercado Público entre los años 2022 y 2023, registrando un incremento significativo del 43%. Este incremento se traduce en un aumento de 96,434 a 138,509 proveedores durante este período.
 
-Sin embargo, se aprecia que el aumento de empresas proveedoras lideradas por hombres es mayor al aumento de emmpresas lideradas por mujeres, pues las primeras experimentaron un aumento de un orden de 47% mientras que las segundas en un orden de 32%
-
+No obstante, es evidente que el crecimiento de las empresas lideradas por hombres supera al de las empresas lideradas por mujeres. Mientras que las primeras experimentaron un aumento del 47%, las segundas observaron un incremento del 32%, reflejando así una diferencia en las tasas de crecimiento entre ambos grupos
 
 ## Propuesta
 
-- El indice que proponemos, siguiendo de cerca el trabajo de Permanyer (2010) es el siguiente: 
+Tomando en cuenta que el proceso de compra abarca diversas etapas previas a la emisión de una orden de compra, y que en cada una de estas etapas existen indicadores que miden las brechas de género, presentamos una metodología para construir un índice que evalúe la participación en las compras públicas desde una perspectiva de género. Este índice proporciona una visión global, condensando todas las posibles diferencias en un solo número para una interpretación más clara del progreso de cada organismo público.
+
+El índice propuesto, siguiendo la línea de trabajo de Permanyer (2010), se formula de la siguiente manera:
+
 
 $$
 IPPG_{t}^{i} = \sqrt[n_{j}]{\prod_{j=1}^{n_{j}}R_{j,t}^{i}}
@@ -394,7 +264,8 @@ Donde:
   
 En que $i=1,...,M$ corresponde a las instituciones del Estado; $j = 1,..,n_{j}$, corresponde a las dimensiones a considerar; $t=1,..,T$ identifica la dimensión tiempo, por último, el subíndice $M$ a las empresas lideradas por mujeres y $H$, aquellas lideradas por hombres  
 
-## Propuesta
+
+
 
 En este caso, $R_{j,t}^{i}$ es un odds ratio para cada una de las etapas del proceso de participación, representando por tanto la  razón entre las probabilidades tanto de hombres como mujeres en las diferentes etapas del proceso, es decir, las chance de:  
 
@@ -402,9 +273,12 @@ En este caso, $R_{j,t}^{i}$ es un odds ratio para cada una de las etapas del pro
 - Ofertar en algún procedimiento de compra: Razón entre empresas lideradas por mujeres y por hombres que ofertan en licitaciones, compra ágil, convenio marco, etc. 
 - Recibir una orden de compra: Razón entre el número de empresas lideradas por mujeres y por hombres, que reciben una orden de compra 
 
-## Resultados preliminares
+El índice solo toma valores positivos, mayores a cero, y puede tender hacia el infinito según la desigualdad del proceso. Será igual a 1 en caso de igualdad perfecta, superior a 1 si las proveedoras mujeres son favorecidas y menor a 1 si los proveedores hombres son favorecidos.
 
-El índice tiene como rango valores entre 0 e $\infty$, valores mayores a 1 indican una mayor preferencia por la contratación de empresas lideradas por mujeres, mientras que un valor cercano a 0 una mayor preferencia por empresas lideradas por hombres 
+Finalmente, es crucial destacar que el índice propuesto penaliza matemáticamente la inequidad de género por cada brecha adicional detectada. En otras palabras, el índice tiende más rápidamente a cero (desfavoreciendo a las mujeres) a medida que existen más ratios de participación con inequidad.
+
+# Resultados preliminares
+
 
 
 ```{r, echo=FALSE, warning=FALSE}
@@ -436,32 +310,6 @@ En esta figura se puede apreciar que existe una mejora en términos de cada una 
 Con todo, podemos observar que el índice general pasa de 34.2 a 39.1, es decir una variación de 14.3%
 
 Este es un hallazgo interesante pues apreciamos que aunque existe un brusco aumento de la oferta, muchas de ellas no se materializan en una adjudicación
-
-
-```{r}
-
-indice_c_2022 = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado_cohorte_2022.rds"))
-
-
-(
-  indice_plot_c_2022 = ggplot(indice_c_2022, aes(x = fecha)) +
-    geom_line(aes(y = indicador, color = "General"), size = 1) +
-    #geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
-    geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
-    geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
-    geom_text(aes(x = fecha, y = indicador, label = round(indicador*100,1)))+
-    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
-    geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta*100,1)))+
-    geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica*100,1)))+
-    labs(title = "IPPG 2022-2023, inscritos desde enero 2022",
-         y = "Índice",
-         x = "Fecha", 
-         color = "Categoría") +
-    theme_minimal()
-)
-
-```
-
 
 
 ## Resultados preliminares 

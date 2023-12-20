@@ -2,67 +2,92 @@ Cuaderno de Laboratorio: Índice de Participación con Perspectiva de
 Género
 ================
 
-Un **cuaderno de investigación**, también conocido como cuaderno de
-laboratorio o cuaderno de campo, es un documento utilizado por
-investigadores para registrar de manera sistemática y detallada todas
-las etapas y aspectos de un proyecto de investigación. Este cuaderno
-sirve como un registro permanente de las observaciones, experimentos,
-resultados, análisis y cualquier otro dato relevante asociado con la
-investigación.
-
-## ChileCompra
-
-<span style="color: red;"> Estos bullets se usaron para la presentación
-realizada con funcionarias del ministerio de hacienda, por tanto, se
-consideró necesario hacer un recordatorio del quehacer del servicio, sin
-embargo, para uso interno es prescindible </span>
-
-- La Dirección de Compras y Contratación Pública, Dirección ChileCompra
-  es una entidad clave para más de 1.000 organismos públicos en Chile,
-  facilitando la adquisición de bienes y servicios. A través de su
-  plataforma transaccional, [Mercado
-  Público](https://www.mercadopublico.cl).
-
-- En 2022 las transacciones de organismos del Estado a través de la
-  plataforma de ascendieron a más de **US\$ 15.000 millones**, cerca del
-  5% del PIB, a través de más de 1.800.000 órdenes de compra, siendo uno
-  de los mercados más importantes del país.
-
-- Hoy fue promulgada la modernización de la Ley de Compras Públicas, con
-  el objetivo de mejorar la calidad del gasto, elevar la probidad y
-  transparencia, e integrar principios de economía circular.
-
 ## Motivación
 
-La Dirección ChileCompra actualizó su directiva incorporando perspectiva
-de género en las compras públicas, buscando abordar desigualdades y
-roles de género para promover una sociedad más equitativa.
+En el marco de la evolución y modernización de las políticas públicas en
+Chile, la Dirección de Compras y Contratación Pública (ChileCompra) tomó
+la iniciativa de fortalecer su enfoque en la igualdad de género a través
+de la actualización de la Directiva N°20 en noviembre de 2022. Este paso
+estratégico representa un compromiso institucional con la promoción de
+la equidad, marcando el inicio de una serie de acciones destinadas a
+potenciar la participación de mujeres en el ámbito de las compras
+públicas.
 
-- La autonomía de la mujer, clave para su independencia en decisiones
-  físicas, educativas y económicas, destaca como pilar crucial para
-  lograr igualdad de oportunidades.
+Un hito clave derivado de esta actualización es la automatización de la
+entrega del Sello Empresa Mujer. Este distintivo, otorgado a las
+empresas proveedoras que cumplen con criterios específicos, no solo
+reconoce el compromiso con la igualdad de género, sino que también actúa
+como un catalizador para estimular prácticas empresariales inclusivas y
+generar un impacto positivo en la participación femenina en el sector.
 
-- La autonomía económica de las mujeres haya apoyo estratégico en las
-  compras públicas, ofreciendo oportunidades y contribuyendo a su
-  independencia financiera.
+La actualización de la directiva no solo responde a una necesidad
+institucional, sino que también refleja un compromiso más amplio con la
+construcción de una sociedad más equitativa. Se reconoce que la
+autonomía de la mujer en sus decisiones físicas, educativas y económicas
+es un pilar crucial para lograr igualdad de oportunidades. Por ende, de
+allí que la promoción de la participación activa de mujeres en el ámbito
+de las compras públicas se presenta como un componente estratégico en el
+fomento de la autonomía económica de este segmento de…. la población.
 
-- De allí que el **Objetivo General** de esta propuesta consiste en
-  **desarrollar e implementar un indicador para medir la participación
-  de mujeres como proveedoras en el sistema de compras públicas** de
-  Chile, con el propósito de evaluar y promover la equidad de género en
-  las distintas etapas del proceso y contribuir a la autonomía económica
-  de las mujeres.
+En este contexto, el objetivo general de la propuesta se define con
+claridad: desarrollar e implementar un indicador que no solo mida la
+participación de mujeres como proveedoras en el sistema de compras
+públicas de Chile, sino que también tenga como propósito evaluar y
+promover la equidad de género en todas las etapas del proceso. Este
+indicador no solo será un instrumento de medición, sino también una
+herramienta activa para contribuir a la autonomía económica de las
+mujeres, respaldando así la visión de una sociedad más inclusiva y
+equitativa.
 
-## Contexto: Empresas lideradas por mujeres según Monto transado y órdenes de compra
+De esta manera, es posible caracterizar el sistema de compras públicas
+un conjunto de indicadores derivados de información transaccional
+generada dentro de Mercado Público, así como en datos complementarios y
+oficiales proporcionados por otros organismos públicos. Entre estos
+últimos, destaca la información suministrada por el Registro Civil, que
+incluye datos desglosados por género de cada persona, contribuyendo así
+a una visión más completa y específica de la participación de mujeres en
+este ámbito.
+
+La aplicación y monitoreo periódico de estos indicadores permiterá una
+caracterización directa y sencilla del subconjunto de compras en el que
+participan las empresas lideradas por mujeres. En consonancia con los
+lineamientos establecidos en la Directiva N°20 de compras, se define que
+una empresa es liderada por mujeres y, por ende, cumple con los
+requisitos para obtener el Sello Mujer si satisface alguno de los
+siguientes criterios:
+
+- Poseer más del 50% de propiedad en manos de mujeres.
+- Contar con una gerenta general.
+- Tener más del 50% de representantes legales mujeres.
+- En el caso de personas naturales, la definición se basa en la
+  información proporcionada por el Registro Civil, incluyendo a aquellas
+  personas que han rectificado su sexo registral de acuerdo con la Ley
+  Nº 21.120 de Identidad de Género, identificándose como mujeres.
+
+Es relevante destacar que estos requisitos son sometidos a revisión
+mediante la declaración jurada presentada por los propios proveedores y
+proveedoras cada año, garantizando así la validez y actualización de la
+información.
+
+## Caracterización de empresas con Sello Mujer
+
+Esta sección se centra en la caracterización del sistema de compras
+públicas a través de dos métricas fundamentales: la cantidad de órdenes
+de compra y el monto total transado. Estos indicadores se explorarán
+específicamente en el contexto de las empresas que han obtenido el Sello
+Mujer, ofreciendo una visión analítica que revela tanto patrones de
+participación como la contribución económica relativa de estas empresas
+al sistema en su conjunto
 
 ![](README_files/figure-gfm/primer-1.png)<!-- -->
 
-Este gráfico muestra que aunque no hay variaciones importantes entre
-ambos períodos entre cantidad de órdenes de compra y montos transados,
-sí se puede apreciar una leve mejora en términos de participación en los
-montos pasando de un 17% en 2022 para las mujeres a un 19,7%, sobre todo
-si se tiene en cuenta que a pesar de que el año 2023 no ha concluido, se
-aprecia un total transado muy similar al año anterior.
+Este gráfico revela que, aunque las variaciones en la cantidad de
+órdenes de compra y montos transados entre ambos períodos son mínimas,
+se observa una mejora sutil en la participación en los montos. Esta
+mejora es evidente al pasar del 17% en 2022 al 19.7% para las mujeres.
+Es especialmente notable considerando que, a pesar de que el año 2023
+aún no ha concluido, se aprecia un volumen total transado muy similar al
+año anterior.
 
 ## Monto y cantidad de órdenes de compra según procedimiento de compra
 
@@ -176,13 +201,37 @@ Este es un hallazgo interesante pues apreciamos que aunque existe un
 brusco aumento de la oferta, muchas de ellas no se materializan en una
 adjudicación
 
+``` r
+indice_c_2022 = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado_cohorte_2022.rds"))
+
+
+(
+  indice_plot_c_2022 = ggplot(indice_c_2022, aes(x = fecha)) +
+    geom_line(aes(y = indicador, color = "General"), size = 1) +
+    #geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
+    geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
+    geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
+    geom_text(aes(x = fecha, y = indicador, label = round(indicador*100,1)))+
+    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
+    geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta*100,1)))+
+    geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica*100,1)))+
+    labs(title = "IPPG 2022-2023, inscritos desde enero 2022",
+         y = "Índice",
+         x = "Fecha", 
+         color = "Categoría") +
+    theme_minimal()
+)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
 ## Resultados preliminares
 
-<img src="README_files/figure-gfm/unnamed-chunk-7-1.png" width="80%" />
+<img src="README_files/figure-gfm/unnamed-chunk-8-1.png" width="80%" />
 
 ## Resultados preliminares
 
-![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ## Agenda
 
