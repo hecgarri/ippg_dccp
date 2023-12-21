@@ -30,7 +30,7 @@ con4 = RODBC::odbcConnect("dwh", uid = "datawarehouse", pwd ="datawarehouse") #D
 # #Queries =====================
 # 
 # 
-stats_oc_by_seal <- function(x,y, window = -12){
+stats_oc_by_seal <- function(x,y, window = -11){
   sqlQuery(con4,sprintf("
               DECLARE @MONTH AS INT;          
               DECLARE @ANIO AS INT;
@@ -67,7 +67,7 @@ stats_oc_by_seal <- function(x,y, window = -12){
 q_1.1 = stats_oc_by_seal(x = 12, y = 2022)
 
 
-stats_oc_by_seal2 <- function(x,y, window = -12){
+stats_oc_by_seal2 <- function(x,y, window = -11){
   sqlQuery(con3,sprintf("
               DECLARE @MONTH AS INT;          
               DECLARE @ANIO AS INT;
@@ -286,7 +286,13 @@ f_4 = function(x,y, window){
       A.proveedorRut=B.orgTaxID) AND
     (C.porSendDate < @endDate) AND
     (C.porSendDate >= @startDate)
-  )
+   
+   UNION 
+   
+   SELECT DISTINCT t.CodigoEmpresa collate Modern_Spanish_CI_AI [Transan] 
+    from  [DCCPCotizacion].[dbo].[Cotizacion] t
+    where year(FechaCreacion)=@ANIO and ESTADOID = 2
+   )
   SELECT
   (CASE WHEN s.TipoSello=3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
   , COUNT(DISTINCT t.Transan) [Proveedores]
@@ -310,20 +316,38 @@ f_4 = function(x,y, window){
 
 t_4 <- list()
 
-t_4[[1]] <- sqlQuery(con2, "-- Proveedores participando 2022 (cuenta pública)
-                            SELECT distinct [transan] collate Modern_Spanish_CI_AI as [transan]
-                            FROM [Estudios].[dbo].[proveedores_participando_2022_z] t
-                            LEFT JOIN (SELECT DISTINCT
-                            s.entcode as Transan
-                            ,s.TipoSello
-                            FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
-                            WHERE
-                            (s.[TipoSello] = 3 and s.persona = 1) or  -- persona natural
-                            (s.[TipoSello] = 3 and s.persona = 2
-                            and year(s.FechaCaducidad) >= 2022
-                            and year(s.fechacreacion) <= 2022)    -- persona juridica
-                            ) s on s.Transan collate Modern_Spanish_CI_AI = t.Transan
-                        GROUP BY s.TipoSello")
+t_4[[1]] <- sqlQuery(con2, "
+                                     with TEMP as(
+                -- Proveedores participando 2022 (cuenta pública)
+                    SELECT distinct 
+                    [Transan] collate Modern_Spanish_CI_AI [Transan]
+                    FROM [Estudios].[dbo].[proveedores_participando_2022_z] t
+             
+                    UNION
+                 
+                -- Proveedores participando en CAg 2022
+                    select distinct 
+                    t.CodigoEmpresa collate Modern_Spanish_CI_AI [Transan] 
+                      from  [DCCPCotizacion].[dbo].[Cotizacion] t
+                      where year(FechaCreacion)=2022 and ESTADOID = 2)
+                    
+                SELECT 
+                (CASE WHEN s.TipoSello = 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+                ,COUNT(DISTINCT t.transan) [Proveedores]
+                FROM TEMP t
+                LEFT JOIN (SELECT DISTINCT
+                    s.entcode as Transan
+                    ,s.TipoSello
+                    FROM [DCCPMantenedor].[MSello].[SelloProveedor] s
+                    WHERE
+                    (s.[TipoSello] = 3 and s.persona = 1) or  -- persona natural
+                    (s.[TipoSello] = 3 and s.persona = 2
+                    and year(s.FechaCaducidad) >= 2022
+                    and year(s.fechacreacion) <= 2022)    -- persona juridica
+                    ) s on s.Transan collate Modern_Spanish_CI_AI = t.Transan
+                GROUP BY s.TipoSello
+                     ") %>%
+  mutate(anio = 2022)
 
 
 t_4[[2]] <- f_4(x= 11, y = 2023, window = -10) %>% mutate(anio = 2023)

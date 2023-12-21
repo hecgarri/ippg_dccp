@@ -201,28 +201,6 @@ Este es un hallazgo interesante pues apreciamos que aunque existe un
 brusco aumento de la oferta, muchas de ellas no se materializan en una
 adjudicación
 
-``` r
-indice_c_2022 = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado_cohorte_2022.rds"))
-
-
-(
-  indice_plot_c_2022 = ggplot(indice_c_2022, aes(x = fecha)) +
-    geom_line(aes(y = indicador, color = "General"), size = 1) +
-    #geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
-    geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
-    geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
-    geom_text(aes(x = fecha, y = indicador, label = round(indicador*100,1)))+
-    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
-    geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta*100,1)))+
-    geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica*100,1)))+
-    labs(title = "IPPG 2022-2023, inscritos desde enero 2022",
-         y = "Índice",
-         x = "Fecha", 
-         color = "Categoría") +
-    theme_minimal()
-)
-```
-
 ![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ## Resultados preliminares

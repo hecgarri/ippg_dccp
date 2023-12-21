@@ -336,7 +336,7 @@ p_42 <- ggplot(t_4[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello M
   geom_bar(stat = "identity", color = "black") +
   scale_fill_manual(values = colores)+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
-   geom_text(aes(label = paste0(round(Proveedores, 0))), position = position_stack(vjust = 1.05))+
+   geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
   labs(title = "Empresas con Sello mujer 2023",
        x = "Sello Mujer",
        y = "Cantidad proveedores",
@@ -348,7 +348,7 @@ p_41 <- ggplot(t_4[[1]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello M
   geom_bar(stat = "identity", color = "black") +
   scale_fill_manual(values = colores)+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
-   geom_text(aes(label = paste0(round(Proveedores, 0))), position = position_stack(vjust = 1.05))+
+   geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
   labs(title = "Empresas con Sello mujer 2022",
        x = "Sello Mujer",
        y = "Cantidad proveedores",
@@ -409,7 +409,7 @@ El índice tiene como rango valores entre 0 e $\infty$, valores mayores a 1 indi
 
 ```{r, echo=FALSE, warning=FALSE}
 
-indice = readRDS(file = paste0(wd_path,"20231214_datos_indice_agregado.rds"))
+indice = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado.rds"))
 
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +
@@ -438,7 +438,7 @@ Con todo, podemos observar que el índice general pasa de 34.2 a 39.1, es decir 
 Este es un hallazgo interesante pues apreciamos que aunque existe un brusco aumento de la oferta, muchas de ellas no se materializan en una adjudicación
 
 
-```{r}
+```{r, echo=FALSE, warning=FALSE}
 
 indice_c_2022 = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado_cohorte_2022.rds"))
 
@@ -461,7 +461,6 @@ indice_c_2022 = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado_co
 )
 
 ```
-
 
 
 ## Resultados preliminares 

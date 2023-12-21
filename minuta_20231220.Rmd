@@ -85,9 +85,9 @@ Es relevante destacar que estos requisitos son sometidos a revisión mediante la
 
 ## Caracterización de empresas con Sello Mujer
 
-Esta sección se centra en la caracterización del sistema de compras públicas a través de dos métricas fundamentales: la cantidad de órdenes de compra y el monto total transado. Estos indicadores se explorarán específicamente en el contexto de las empresas que han obtenido el Sello Mujer, ofreciendo una visión analítica que revela tanto patrones de participación como la contribución económica relativa de estas empresas al sistema en su conjunto
+Esta sección se centra en la caracterización del sistema de compras públicas a través de dos métricas fundamentales: la cantidad de órdenes de compra y el monto total transado. Estos indicadores se explorarán específicamente en el contexto de las empresas que han obtenido el Sello Mujer en relación a las demás, ofreciendo una visión analítica que revela tanto patrones de participación como la contribución económica relativa de estas empresas al sistema en su conjunto
 
-```{r primer,warning=FALSE, echo=FALSE}
+```{r primer,warning=FALSE, echo=FALSE, fig.cap='Montos transados y cantidad de órdenes de compra según Sello, 2022-2023'}
 
 # q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds") %>% 
 #   mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`), "Hombres", "Mujeres")) %>%
@@ -174,37 +174,20 @@ Este gráfico revela que, aunque las variaciones en la cantidad de órdenes de c
 
 ## Cantidad de empresas proveedoras según sello
 
-```{r, eval=TRUE, echo=FALSE, warning=FALSE}
-q_4 = readr::read_rds(file = "sello_proveedores.rds") %>% 
-  mutate(Sello = formattable::comma(Sello, decimal.mark = ",", big.mark = "."), 
-         prop = formattable::comma(prop, decimal.mark = ",", big.mark = ".")) 
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, fig.cap='Empresas según sello, 2022-2023'}
+
+
+t_4 <- readr::read_rds(file = paste0(wd_path,"t_4.rds"))
+
 
 colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
              "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
-
-
-  p_4<- ggplot(q_4, aes(x = reorder(`Sello Mujer`, -Sello), y = `Sello`, fill = `Sello Mujer`)) +
-  geom_bar(stat = "identity", color = "black") +
-  scale_fill_manual(values = colores)+
-   geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
-   geom_text(aes(label = paste0(round(Sello, 0))), position = position_stack(vjust = 1.05))+
-  labs(title = "Empresas con Sello mujer 2022",
-       x = "Sello Mujer",
-       y = "Cantidad proveedores",
-       caption = "Elaboración propia a partir de datos de ChileCompra") +
-  theme_minimal() +
-  theme(legend.position = "top")
-
-
-
-t_4 <- readr::read_rds(file = "t_4.rds")
-
 
 p_42 <- ggplot(t_4[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
   geom_bar(stat = "identity", color = "black") +
   scale_fill_manual(values = colores)+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
-   geom_text(aes(label = paste0(round(Proveedores, 0))), position = position_stack(vjust = 1.05))+
+   geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
   labs(title = "Empresas con Sello mujer 2023",
        x = "Sello Mujer",
        y = "Cantidad proveedores",
@@ -216,7 +199,7 @@ p_41 <- ggplot(t_4[[1]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello M
   geom_bar(stat = "identity", color = "black") +
   scale_fill_manual(values = colores)+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
-   geom_text(aes(label = paste0(round(Proveedores, 0))), position = position_stack(vjust = 1.05))+
+   geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
   labs(title = "Empresas con Sello mujer 2022",
        x = "Sello Mujer",
        y = "Cantidad proveedores",
@@ -281,9 +264,9 @@ Finalmente, es crucial destacar que el índice propuesto penaliza matemáticamen
 
 
 
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE, fig.cap='Evolución del IPPG para Mercado Público, 2022-2023'}
 
-indice = readRDS(file = paste0(wd_path,"20231214_datos_indice_agregado.rds"))
+indice = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado.rds"))
 
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +
@@ -305,57 +288,38 @@ indice = readRDS(file = paste0(wd_path,"20231214_datos_indice_agregado.rds"))
 
 ```
 
-En esta figura se puede apreciar que existe una mejora en términos de cada una de las dimensiones bajo análisis (participación, oferta y adjudicación), pero que ha sido más pronunciado en algunas dimensiones que en otras, eb esa línea, el cambio más discreto ocurre en el ratio de participación, pasando desde 32.4 a 33.8 que significa una variación de 4.3%. En materia de oferta, el índice pasa de 29.8 a 37.3, un aumento del 25,2%, es decir, la dimensión que más crece, pues en el caso de la adjudicación, observamos que pasa desde 41.2 a 47.4, representando un aumento de 15%. 
+En esta figura se puede apreciar que existe una mejora en términos de cada una de las dimensiones bajo análisis (participación, oferta y adjudicación), pero que ha sido más pronunciado en algunas dimensiones que en otras, eb esa línea, el cambio más discreto ocurre en el ratio de participación, pasando desde `r `` a 33.8 que significa una variación de 4.3%. En materia de oferta, el índice pasa de 29.8 a 37.3, un aumento del 25,2%, es decir, la dimensión que más crece, pues en el caso de la adjudicación, observamos que pasa desde 41.2 a 47.4, representando un aumento de 15%. 
 
 Con todo, podemos observar que el índice general pasa de 34.2 a 39.1, es decir una variación de 14.3%
 
 Este es un hallazgo interesante pues apreciamos que aunque existe un brusco aumento de la oferta, muchas de ellas no se materializan en una adjudicación
 
 
-## Resultados preliminares 
+### Organismos Públicos
 
 ```{r, out.width = "80%",  echo = FALSE, warning=FALSE}
 
-data_index_inst = readr::read_rds(file = paste0(wd_path, "20231218_data_index_inst.rds"))
-
-
-medias <- aggregate(indicador ~ `Anio Central`, data = data_index_inst, mean)
+data_plot = readRDS(file = paste0(wd_path,"/data_plot.rds"))
 
 (
-  ind_hist = ggplot(data_index_inst, aes(indicador,fill = as.factor(`Anio Central`))) +
+  ind_hist = ggplot(data_plot, aes(indicador,fill = as.factor(`Anio Central`))) +
     geom_density(alpha = .5) +
 #    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
-    geom_vline(aes(xintercept = indicador, color = `Anio Central`),
-               linetype = "dashed", size = 1, data = medias) +
+    # geom_vline(aes(xintercept = indicador, color = `Anio Central`),
+    #            linetype = "dashed", size = 1, data = medias) +
     # geom_text(aes(x = indicador, label = round(indicador, 2)),
     #           vjust = -0.5, data = medias)+
+    #geom_vline(aes(xintercept = mean(indicador, na.rm = TRUE)), linetype = "dashed", linewidth = 1) +
     labs(title = "Histograma del IPPG",
          x = "IPPG",
-         y = "Frecuencia")+
-    theme_minimal()
-  
-)
-```
-
-
-## Resultados preliminares
-
-```{r, echo = FALSE, warning=FALSE}
-
-ind_hist = readr::read_rds(file = "20231126_datos_índice_desagregado_por_instituciones.rds")
-
-
-(
-  ind_hist = ggplot(datos_ind_fil %>% 
-                      arrange(indicador), aes(indicador, , y = ..density..)) +
-    geom_histogram(binwidth = 0.01, fill = "blue", color = "black") +
-    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
-    geom_hline(yintercept = mean(datos_ind_fil$indicador), linetype = "dashed", color = "red", size = 1) +
-    labs(title = "Histograma del IPPG",
-         x = "IPPG",
-         y = "Frecuencia")+
-    theme_minimal()
-  
+         y = "Frecuencia", 
+         fill = 'Año')+
+    theme_minimal()+
+  guides(color = FALSE)+
+    xlim(c(0,1.2))+
+    scale_fill_manual(values = c('2022' = "red"
+                                 ,'2023' = "blue")
+                      , breaks = c('2022', '2023'), labels = c('2022','2023'))
 )
 
 ```

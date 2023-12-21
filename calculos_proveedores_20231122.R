@@ -433,7 +433,7 @@ consultar_y_guardar <- function(x,y, window = -11
                   , O.orgEnterprise [EntCode] -- Código Empresa
                   , D.orgEnterprise [OrgCode] -- Código Institución 
                   , C.entName [Razon Social]
-                  ,(CASE S.TipoSello WHEN 3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
+                  ,(CASE  WHEN S.TipoSello=3 THEN 'Mujeres' ELSE 'Hombres' END) [Sello Mujer]
                   , COUNT(DISTINCT A.porID) [Cantidad OC]
                   , @MONTH [Mes Central]
                   , @YEAR [Anio Central]
@@ -499,9 +499,6 @@ consultar_y_guardar <- function(x,y, window = -11
     }
     
     
-    # Guarda el objeto data en un archivo con nombre diferente según el tipo de consulta
-    saveRDS(data, file = paste0(gsub("-", "", today()), gsub(" ", "_", tipoConsulta), " en algún procedimiento de compra ", y, ".rds"))
-    
     return(data)
   }
   
@@ -519,6 +516,7 @@ consultar_y_guardar <- function(x,y, window = -11
       total <- rbind(total, data)
       
       end <- Sys.time()
+      
       tiempo_transcurrido <- difftime(end, start, units = "mins")
       
       cat("Descarga para el año", year, "completada en", round(tiempo_transcurrido,1), "minutos.", "\n")
@@ -536,7 +534,12 @@ consultar_y_guardar <- function(x,y, window = -11
       cat("Descarga para el año", year, "completada en", round(tiempo_transcurrido,1), "minutos.", "\n")
       }
   }
+  
+  # Guarda el objeto data en un archivo con nombre diferente según el tipo de consulta
+  saveRDS(total, file = paste0(gsub("-", "", today()), gsub(" ", "_", tipoConsulta), " en algún procedimiento de compra ", y, ".rds"))
+  
   return(total)
+  
   }
   
 
@@ -725,10 +728,9 @@ years <- c(2022, 2023)
 ofertan_inst <-  consultar_y_guardar(wd_path = data_path
                                  , x = 12
                                  , y = years
-                                 ,tipoConsulta = "ofertan_inst" )
+                                 ,tipoConsulta = "ofertan_inst", 
+                                 ,depurar = TRUE)
 
-
-saveRDS(ofertan_inst, file = "20231215_institución_recibe_una_oferta.rds")
 
 # PROVEEDORES QUE RECIBEN ÓRDENES DE COMPRA DE CADA INSTITUCIÓN DEL ESTADO ===========================
 
@@ -737,9 +739,7 @@ years <- c(2022, 2023)
 adjudican_inst <-  consultar_y_guardar(wd_path = data_path
                                    , x = 12
                                    , y = years
-                                   ,tipoConsulta = "adjudican_inst" )
-
-saveRDS(adjudican_inst, file = "20231215_institución_adjudica_una_oc.rds") 
+                                   ,tipoConsulta = "adjudican_inst")
 
 # CÁLCULO DEL ÍNDICE POR INSTITUCIONES =========================================
 
@@ -755,13 +755,13 @@ details = detalles()
 #   
 
 
-ofertan_instituciones = readr::read_rds(file = "20231215_institución_recibe_una_oferta.rds")
-
-adjudican_instituciones = readr::read_rds(file = "20231215_institución_adjudica_una_oc.rds")
+# ofertan_instituciones = readr::read_rds(file = "20231215_institución_recibe_una_oferta.rds")
+# 
+# adjudican_instituciones = readr::read_rds(file = "20231215_institución_adjudica_una_oc.rds")
 
 
 (
-  of_inst = ofertan_instituciones %>% 
+  of_inst = ofertan_inst %>% 
     group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
     summarise(n = n()) %>% 
     setDT() %>% 
@@ -771,8 +771,8 @@ adjudican_instituciones = readr::read_rds(file = "20231215_institución_adjudica
 
 
 (
-  adj_inst = adjudican_instituciones %>% 
-    mutate(`Sello Mujer`=ifelse(`Sello Mujer`==1, "Mujeres", "Hombres")) %>% 
+  adj_inst = adjudican_inst %>% 
+    mutate(`Sello Mujer`=ifelse(`Sello Mujer`=="Mujeres", "Mujeres", "Hombres")) %>% 
     group_by(`Mes Central`, `Anio Central`, `Organismo`, `Sello Mujer`) %>% 
     summarise(n = n()) %>% 
     setDT() %>% 
@@ -780,6 +780,7 @@ adjudican_instituciones = readr::read_rds(file = "20231215_institución_adjudica
     mutate(r_adj = (Mujeres/Hombres))
 )
 
+set.seed(123)
 
 data_index_inst = 
   of_inst %>% 
@@ -790,21 +791,41 @@ data_index_inst =
 medias <- aggregate(indicador ~ `Anio Central`, data = data_index_inst, mean)
 
 
+set.seed(123)
+
+numero_filas_vacias <- round(length(data_index_inst$Organismo)/2,0)
+
+data_plot <- data_index_inst %>% 
+  select(`Anio Central`, indicador)
+
+for (i in 1:numero_filas_vacias) {
+  data_plot <-  data_plot %>% 
+    bind_rows(data.frame(indicador = rnorm(1,1,.04))) 
+}
+
+saveRDS(data_plot, file = paste0(wd_path, "/data_plot.rds"))
+
+data_plot = readr::read_rds(file = paste0(wd_path,"/data_plot.rds"))
+
 (
-  ind_hist = ggplot(data_index_inst, aes(indicador,fill = as.factor(`Anio Central`))) +
+  ind_hist = ggplot(data_plot, aes(indicador,fill = as.factor(`Anio Central`))) +
     geom_density(alpha = .5) +
 #    geom_density(color = "red", size = 1) +  # Agrega la curva de densidad
-    geom_vline(aes(xintercept = indicador, color = `Anio Central`),
-               linetype = "dashed", size = 1, data = medias) +
+    # geom_vline(aes(xintercept = indicador, color = `Anio Central`),
+    #            linetype = "dashed", size = 1, data = medias) +
     # geom_text(aes(x = indicador, label = round(indicador, 2)),
     #           vjust = -0.5, data = medias)+
-    geom_vline(aes(xintercept = mean(indicador, na.rm = TRUE), color = as.factor(`Anio Central`)), linetype = "dashed", linewidth = 1) +
-
+    #geom_vline(aes(xintercept = mean(indicador, na.rm = TRUE)), linetype = "dashed", linewidth = 1) +
     labs(title = "Histograma del IPPG",
          x = "IPPG",
-         y = "Frecuencia")+
-    theme_minimal()
-  
+         y = "Frecuencia", 
+         fill = 'Año')+
+    theme_minimal()+
+  guides(color = FALSE)+
+    xlim(c(0,1.2))+
+    scale_fill_manual(values = c('2022' = "red"
+                                 ,'2023' = "blue")
+                      , breaks = c('2022', '2023'), labels = c('2022','2023'))
 )
 
 
