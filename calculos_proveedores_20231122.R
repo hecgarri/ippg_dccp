@@ -568,6 +568,13 @@ inscritos_ <-  consultar_y_guardar(wd_path = data_path
                                  ,depurar = TRUE)
 
 
+logueados_ <-  consultar_y_guardar(wd_path = data_path
+                                   , x = 12
+                                   , y = years
+                                   ,tipoConsulta = "login"
+                                   ,depurar = TRUE)
+
+
 inscritos_2022 <- inscritos_ %>% 
   mutate(`Fecha de creación empresa` = as.Date(`Fecha de creación empresa`)) %>% 
   filter(`Fecha de creación empresa`>=as.Date("2022-01-01"))
