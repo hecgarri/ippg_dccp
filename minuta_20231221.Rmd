@@ -389,7 +389,7 @@ En la Tabla 1 se destacan los 20 organismos estatales que brindaron mayores opor
 
 En resumen, el análisis detallado de la igualdad de género durante el período 2022-2023 pone de manifiesto avances generales en el sistema, señalando un progreso positivo en la consideración de la equidad de género. Sin embargo, la existencia de una brecha significativa entre las empresas lideradas por mujeres y hombres destaca la necesidad apremiante de abordar desafíos persistentes para lograr una equidad más completa en el ámbito empresarial. La diversidad en las distribuciones de los organismos compradores entre ambos años subraya la variabilidad inherente en este aspecto, lo que sugiere que la igualdad de género es un fenómeno dinámico que varía según el contexto.
 
-Al desglosar cada dimensión del índice, surge un hallazgo intrigante: la etapa de inscripción muestra ser la de menor igualdad, seguida por la dimensión de oferta, y en última instancia, la adjudicación. Este descubrimiento tiene implicaciones significativas desde una perspectiva de política pública, indicando que para mejorar las oportunidades de las mujeres, es esencial fomentar su participación activa en el sistema. Una vez que ingresan, se observa que sus posibilidades de adjudicar algún procedimiento son más favorables, subrayando la importancia de brindar un apoyo continuo a lo largo del proceso.
+Al desglosar las dimensiones del índice, surge un hallazgo interesante: la etapa de oferta, es menos igualitaria que la instancia de adjudicación, que se puede complementar además con el hecho de que en las exploracionse realizadas sobre inscrición y actividad en la plataforma se evidencia una proporción todavía menor de empresas lideradas por mujeres. Este descubrimiento tiene implicaciones significativas desde una perspectiva de política pública, indicando que para mejorar las oportunidades de las mujeres, es esencial fomentar su participación activa en el sistema. Una vez que ingresan, se observa que sus posibilidades de adjudicar algún procedimiento son más favorables, subrayando la importancia de brindar un apoyo continuo a lo largo del proceso.
 
 Adicionalmente, se propone la identificación de variables adicionales que puedan explicar el comportamiento del índice. Este enfoque busca comprender las razones subyacentes del fenómeno, facilitando la formulación de estrategias más efectivas para abordar y superar los desafíos persistentes en la igualdad de género en el ámbito empresarial. La consideración de factores contextuales y específicos del sector permitirá una comprensión más holística de los determinantes de la equidad de género.
 
@@ -413,8 +413,8 @@ ins <- lapply(c(2022,2023)
                 summarise(Proveedores = n())
               )
 
-  pct <- rbind(ins[[1]]  %>% summarise(total = sum(Proveedores))
-               ,ins[[2]]  %>% summarise(total = sum(Proveedores))) %>% data.frame()
+  pct <- c(ins[[1]]  %>% summarise(total = sum(Proveedores)) %>% as.numeric
+               ,ins[[2]]  %>% summarise(total = sum(Proveedores)) %>% as.numeric) 
 
 
 ins_42 <- ggplot(ins[[1]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
@@ -426,7 +426,7 @@ ins_42 <- ggplot(ins[[1]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello
                   , labels = c('Liderada por \n Hombres','Liderada por \n Mujeres'))+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
    geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
-  geom_text(aes(label = scales::percent(round((Proveedores/pct[1,1]),2), accuracy = .1, decimal.mark = ",")), position = position_stack(vjust = 0.85))+
+  geom_text(aes(label = scales::percent((Proveedores/pct[1]), accuracy = .1, decimal.mark = ",")), position = position_stack(vjust = 0.85))+
   labs(title = "2022",
        x = "Sello Mujer",
        y = "Cantidad proveedores",
@@ -434,7 +434,9 @@ ins_42 <- ggplot(ins[[1]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello
   theme_minimal() +
   theme(legend.position = "top")
 
-ins_41 <- ggplot(ins[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
+
+  
+  ins_41 <- ggplot(ins[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
   geom_bar(stat = "identity", color = "black") +
    scale_fill_manual(values = c('Hombres' = "#87CEEB"
                                  ,'Mujeres' = "#FFB6C1")
@@ -443,7 +445,7 @@ ins_41 <- ggplot(ins[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello
                   , labels = c('Liderada por \n Hombres','Liderada por \n Mujeres'))+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
    geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
-    geom_text(aes(label = scales::percent(round((Proveedores/pct[2,1]),2), accuracy = .1, decimal.mark = ",")), position = position_stack(vjust = 0.85))+
+    geom_text(aes(label = scales::percent((Proveedores/pct[2]), accuracy = .1, decimal.mark = ",")), position = position_stack(vjust = 0.85))+
   labs(title = "2023",
        x = "Sello Mujer",
        y = "Cantidad proveedores",
