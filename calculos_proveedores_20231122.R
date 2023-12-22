@@ -637,12 +637,13 @@ indice =  data_index %>%
                                , `Mes Central`, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
     setDT() %>% 
     dcast(formula = ...~`Sello Mujer`, value.var = c("participantes", "oferentes", "ganadores")) %>% 
-    mutate(r_participa = (participantes_Mujeres/participantes_Hombres)
-           ,r_oferta = (oferentes_Mujeres/oferentes_Hombres) 
-           ,r_adjudica = (ganadores_Mujeres/ganadores_Hombres), 
-           ) %>% 
+    mutate(
+      r_participa = (participantes_Mujeres/participantes_Hombres)
+     ,r_oferta = (oferentes_Mujeres/oferentes_Hombres) 
+     ,r_adjudica = (ganadores_Mujeres/ganadores_Hombres), 
+     ) %>% 
     rowwise() %>% 
-    mutate(indicador = ((r_participa^(1/3))*(r_oferta^(1/3))*(r_adjudica^(1/3))))
+    mutate(indicador = sqrt(r_oferta*r_adjudica))
 )
 
 saveRDS(indice,
@@ -655,11 +656,11 @@ saveRDS(indice,
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +
     geom_line(aes(y = indicador, color = "General"), size = 1) +
-    geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
+   # geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
     geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
     geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
     geom_text(aes(x = fecha, y = indicador, label = round(indicador*100,1)))+
-    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
+    #geom_text(aes(x = fecha, y = r_participa, label = round(r_participa*100,1)))+
     geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta*100,1)))+
     geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica*100,1)))+
     labs(title = "Índice de Participación con Perspectiva de Género para todo el sistema, 2022-2023",
@@ -854,7 +855,9 @@ data_inst <- data_index_inst %>%
          ,`Ratio adjudicación 2022` = r_adj_2022
          ,`Ratio adjudicación 2023` = r_adj_2023
          ,`IPPG 2022` = indicador_2022
-         ,`IPPG 2023` = indicador_2023)
+         ,`IPPG 2023` = indicador_2023) %>% 
+  arrange(desc(`IPPG 2023`)) %>%
+  mutate_at(vars(starts_with('Ratio') | starts_with('IPPG')), ~round(., 2))
 
 write.csv(data_inst, file = "20231218_data_index_inst.csv")
 

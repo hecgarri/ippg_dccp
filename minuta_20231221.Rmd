@@ -3,13 +3,16 @@ title: Minuta de resultados preliminares Índice de Participación con Perspecti
   Género en Compras Públicas
 author: "División de Estudios - Dirección ChileCompra"
 date: "21-12-2023"
-output: 
-  bookdown::pdf_document2: 
-  toc: false
-  fig_caption: "Figura "
+output: pdf_document 
 header-includes:
-  - \usepackage{float}
+- \usepackage[absolute,overlay]{textpos}
+  \setlength{\TPHorizModule}{1mm}
+  \setlength{\TPVertModule}{1mm}
 ---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.pos = 'H', out.width = '90%')
+```
 
 
 ```{r, include=FALSE}
@@ -96,12 +99,11 @@ En consonancia con los lineamientos establecidos en la Directiva N°20 de compra
 Es relevante destacar que estos requisitos son sometidos a revisión mediante la declaración jurada presentada por los propios proveedores y proveedoras cada año, garantizando así la validez y actualización de la información.
 
 
-En primer lugar, analizaremos los montos transados y el número de transacciones materializada a través de órdenes de compra para las empresas proveedoras del sistema según Sello. El gráfico `\@ref(primer)`` presentado a continuación revela que, aunque las variaciones en la cantidad de órdenes de compra y montos transados entre ambos períodos son mínimas \footnote{considerando de todas maneras que la data de 2023 considera sólo hata el mes de noviembre}, se observa una mejora sutil en la participación en los montos. Esta mejora es evidente al pasar del 17% en 2022 al 19.7% para las mujeres. Es especialmente notable considerando que, a pesar de que el año 2023 aún no ha concluido, se aprecia un volumen total transado muy similar al año anterior.
+En primer lugar, analizaremos los montos transados y el número de transacciones materializada a través de órdenes de compra para las empresas proveedoras del sistema según Sello. La figura 1 revela que, aunque las variaciones en la cantidad de órdenes de compra y montos transados entre ambos períodos son mínimas \footnote{considerando de todas maneras que la data de 2023 considera sólo hata el mes de noviembre}, se observa una mejora sutil en la participación en los montos. Esta mejora es evidente al pasar del 16,9% en 2022 al 19.7% para las mujeres en 2023. Es especialmente notable considerando que, a pesar de que el año 2023 aún no ha concluido, se aprecia una cantidad de transacciones muy similar al año anterior (1.809.590 vs 1.804.155).
 
 
 
-
-```{r primer,warning=FALSE, echo=FALSE, fig.cap='Montos transados y cantidad de órdenes de compra según Sello, 2022-2023', fig.pos="H"}
+```{r primer,warning=FALSE, echo=FALSE, fig.cap='Montos transados y cantidad de órdenes de compra según Sello, 2022-2023', fig.pos="H", , results='asis'}
 
 # q_1 = readr::read_rds(file = "q1_monto_cantidad_oc_segun_sello_2018_2020.rds") %>% 
 #   mutate(`Sello Mujer` = ifelse(is.na(`Sello Mujer`), "Hombres", "Mujeres")) %>%
@@ -118,6 +120,8 @@ En primer lugar, analizaremos los montos transados y el número de transacciones
 # Define los colores para "Hombres" y "Mujeres"
 colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
              "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
+
+
 
 
 
@@ -143,12 +147,17 @@ grafico_barras <- function(data, y, z, fill,  colores,formato_dolar,...){
    p = ggplot(data_, aes(x = "", y = {{y}}, fill = {{fill}})) +
     geom_bar(stat = "identity", width = 1, color = "black") +  # Elimina la línea que rodea las tortas
     #coord_polar("y") +
-    scale_fill_manual(values = colores)+
+    scale_fill_manual(values = c('Hombres' = "#87CEEB"
+                                 ,'Mujeres' = "#FFB6C1")
+                      , breaks = c('Hombres',
+                                   'Mujeres')
+                  , labels = c('Liderada por \n Hombres','Liderada por \n Mujeres'))+
     ggtitle("") +
     theme_minimal() +
     facet_wrap(enquo(z),...) +  
      labs(y = "Monto Transado USD (Millones)", x = "Año")+
-    theme(strip.text = element_text(size = 12, face = "bold"))+
+    theme(strip.text = element_text(size = 12, face = "bold")
+          ,legend.position = "bottom")+
     geom_text(data = data_, aes(label = scales::percent(perc_, accuracy = .1,decimal.mark = ",")), vjust = 1.5) +
     geom_text(data = totales_por_genero
                      , aes(x = ""
@@ -157,7 +166,7 @@ grafico_barras <- function(data, y, z, fill,  colores,formato_dolar,...){
                      , "custom" = scales::comma(round(total), big.mark = ".", decimal.mark = ","))
                      , y = total),
               position = position_stack(vjust = 1.025), color = "black", size = 4, inherit.aes = FALSE)+
-     theme(legend.position = "right")+
+     theme(legend.position = "bottom")+
      scale_y_continuous(labels = scales::label_number(scale=1e-6))
    
   return(p)
@@ -189,12 +198,17 @@ grid.arrange(plot_1_1, plot_1_2, ncol = 2)
 t_4 <- readr::read_rds(file = paste0(wd_path,"t_4.rds"))
 
 
-colores <- c("Hombres" = "#87CEEB",  # Celeste pastel para Hombres
-             "Mujeres" = "#FFB6C1")  # Rosado pastel para Mujeres
+# pct <- rbind(t_4[[1]]  %>% summarise(total = sum(Proveedores))
+#              ,t_4[[2]] %>% group_by(anio) %>% summarise(total = sum(Proveedores)))
+
 
 p_42 <- ggplot(t_4[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
   geom_bar(stat = "identity", color = "black") +
-  scale_fill_manual(values = colores)+
+   scale_fill_manual(values = c('Hombres' = "#87CEEB"
+                                 ,'Mujeres' = "#FFB6C1")
+                      , breaks = c('Hombres',
+                                   'Mujeres')
+                  , labels = c('Liderada por \n Hombres','Liderada por \n Mujeres'))+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
    geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
   labs(title = "Empresas con Sello mujer 2023",
@@ -206,7 +220,11 @@ p_42 <- ggplot(t_4[[2]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello M
 
 p_41 <- ggplot(t_4[[1]], aes(x = `Sello Mujer`, y = Proveedores, fill = `Sello Mujer`)) +
   geom_bar(stat = "identity", color = "black") +
-  scale_fill_manual(values = colores)+
+   scale_fill_manual(values = c('Hombres' = "#87CEEB"
+                                 ,'Mujeres' = "#FFB6C1")
+                      , breaks = c('Hombres',
+                                   'Mujeres')
+                  , labels = c('Liderada por \n Hombres','Liderada por \n Mujeres'))+
   # geom_text(aes(label = paste0(round(prop, 1), "%")), position = position_stack(vjust = 0.5)) +
    geom_text(aes(label = scales::comma(round(Proveedores), big.mark = ".", decimal.mark = ",")), position = position_stack(vjust = 1.1))+
   labs(title = "Empresas con Sello mujer 2022",
@@ -234,13 +252,13 @@ grid.arrange(p_41, p_42, ncol = 2)
 
 ```
 
-De este cuadro se desprende un notable aumento en el número de proveedores activos en Mercado Público entre los años 2022 y 2023, registrando un incremento significativo del 43%. Este incremento se traduce en un aumento de 96,434 a 138,509 proveedores durante este período.
+La figura 2 por su parte, muestra un notable aumento en el número de proveedores activos\footnote{Consideramos un proveedor activo si participa de alguno de los procedimientos de compra ofertando o bien si recibe una orden de compra} en Mercado Público entre los años 2022 y 2023, registrando un incremento significativo del 47%. Este incremento se traduce en un salto desde los 97.656\footnote{Esta cifra difere levemente de la presentada en la cuenta pública ya que considera también a aquellos proveedores que cotizan en Compra Ágil} empresas a 143.914 empresas proveedoras durante este período.
 
-No obstante, es evidente que el crecimiento de las empresas lideradas por hombres supera al de las empresas lideradas por mujeres. Mientras que las primeras experimentaron un aumento del 47%, las segundas observaron un incremento del 32%, reflejando así una diferencia en las tasas de crecimiento entre ambos grupos
+No obstante, es evidente que el crecimiento de las empresas lideradas por hombres supera al de las empresas lideradas por mujeres. Mientras que las primeras experimentaron un aumento del 51,8%, las segundas experimentaron un incremento del 34%, reflejando así una diferencia en las tasas de crecimiento entre ambos grupos
 
 # Propuesta Metodológica
 
-Tomando en cuenta que el proceso de compra abarca diversas etapas previas a la emisión de una orden de compra, y que en cada una de estas etapas existen indicadores que miden las brechas de género, presentamos una metodología para construir un índice que evalúe la participación en las compras públicas desde una perspectiva de género. Este índice proporciona una visión global, condensando todas las posibles diferencias en un solo número para una interpretación más clara del progreso de cada organismo público.
+Tomando en cuenta que el proceso de compra abarca diversas etapas previas a la emisión de una orden de compra, y que en cada una de estas etapas existen indicadores que miden las brechas de género, presentamos una metodología para construir un índice que evalúe la participación en las compras públicas desde una mirada multidimensional. Este índice proporciona una visión global, condensando todas las posibles diferencias en un solo número para una interpretación más clara del progreso de cada organismo público.
 
 El índice propuesto, siguiendo la línea de trabajo de Permanyer (2010), se formula de la siguiente manera:
 
@@ -261,30 +279,36 @@ En que $i=1,...,M$ corresponde a las instituciones del Estado; $j = 1,..,n_{j}$,
 
 En este caso, $R_{j,t}^{i}$ es un odds ratio para cada una de las etapas del proceso de participación, representando por tanto la  razón entre las probabilidades tanto de hombres como mujeres en las diferentes etapas del proceso, es decir, las chance de:  
 
-- Participar en Mercado Público: Medida como la razón entre el número de empresas lideradas por mujeres y aquellas lideradas por hombres inscritas en la plataforma.
+- Inscribirse en Mercado Público: Medida como la razón entre el número de empresas lideradas por mujeres y aquellas lideradas por hombres registradas en la plataforma.
 - Ofertar en algún procedimiento de compra: Razón entre empresas lideradas por mujeres y por hombres que ofertan en licitaciones, compra ágil, convenio marco, etc. 
 - Recibir una orden de compra: Razón entre el número de empresas lideradas por mujeres y por hombres, que reciben una orden de compra 
 
-El índice solo toma valores positivos, mayores a cero, y puede tender hacia el infinito según la desigualdad del proceso. Será igual a 1 en caso de igualdad perfecta, superior a 1 si las proveedoras mujeres son favorecidas y menor a 1 si los proveedores hombres son favorecidos.
+El índice solo toma valores positivos, mayores a cero, y puede tender hacia el infinito según la desigualdad del proceso. Será igual a 1 en caso de igualdad perfecta, superior a 1 si las empresas lideradas por mujeres son favorecidas y menor a 1 si las empresas lideradas por hombres lo son.
 
 Finalmente, es crucial destacar que el índice propuesto penaliza matemáticamente la inequidad de género por cada brecha adicional detectada. En otras palabras, el índice tiende más rápidamente a cero (desfavoreciendo a las mujeres) a medida que existen más ratios de participación con inequidad.
 
 # Resultados preliminares
 
+En la figura 3 se puede apreciar que existe una mejora en términos de cada una de las dimensiones bajo análisis entre ambos años (participación, oferta y adjudicación), pero que ha sido más pronunciado en algunas dimensiones que en otras. En esa línea, el cambio más discreto ocurre en el ratio de inscripción, pasando desde 0,32 a 0,34 que significa una variación de 6,3%. En materia de oferta, el índice pasa de 0,3 a 0,38, un aumento del 25,2%, es decir, la dimensión que más crece, pues en el caso de la adjudicación, observamos que pasa desde 0,42 a 0,48, representando un aumento de 14,3%. 
 
+Con todo, podemos observar que el índice general pasa de 0,34 a 0,4, es decir una variación de 17,6%
+
+Este es un hallazgo interesante pues apreciamos que aunque existe un brusco aumento de la oferta, muchas de ellas no se materializan en una adjudicación.
+
+Adicionalmente al indicador calculado para todo el sistema, se procedió a calcular nuestro índice para cada organismo comprador del Estado, de modo tal de poder medir la evolución del fenómeno de manera más detallada. 
 
 ```{r, echo=FALSE, warning=FALSE, fig.cap='Evolución del IPPG para Mercado Público, 2022-2023'}
 
-indice = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado.rds"))
+indice = readRDS(file = paste0(wd_path,"20231221_datos_indice_agregado.rds"))
 
 (
   indice_plot = ggplot(indice, aes(x = fecha)) +
     geom_line(aes(y = indicador, color = "General"), size = 1) +
-    geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
+    #geom_line(aes(y = r_participa, color = "Participación"), size = 1) +
     geom_line(aes(y = r_oferta, color = "Oferta"), size = 1) +
     geom_line(aes(y = r_adjudica, color = "Adjudicación"), size = 1) +
     geom_text(aes(x = fecha, y = indicador, label = round(indicador,2)))+
-    geom_text(aes(x = fecha, y = r_participa, label = round(r_participa,2)))+
+    #geom_text(aes(x = fecha, y = r_participa, label = round(r_participa,2)))+
     geom_text(aes(x = fecha, y = r_oferta, label = round(r_oferta,2)))+
     geom_text(aes(x = fecha, y = r_adjudica, label = round(r_adjudica,2)))+
     labs(title = "Índice de Participación con Perspectiva de Género\n para todo el sistema, 2022-2023",
@@ -297,15 +321,15 @@ indice = readRDS(file = paste0(wd_path,"20231220_datos_indice_agregado.rds"))
 
 ```
 
-En esta figura se puede apreciar que existe una mejora en términos de cada una de las dimensiones bajo análisis (participación, oferta y adjudicación), pero que ha sido más pronunciado en algunas dimensiones que en otras, eb esa línea, el cambio más discreto ocurre en el ratio de participación, pasando desde `r `` a 33.8 que significa una variación de 4.3%. En materia de oferta, el índice pasa de 29.8 a 37.3, un aumento del 25,2%, es decir, la dimensión que más crece, pues en el caso de la adjudicación, observamos que pasa desde 41.2 a 47.4, representando un aumento de 15%. 
-
-Con todo, podemos observar que el índice general pasa de 34.2 a 39.1, es decir una variación de 14.3%
-
-Este es un hallazgo interesante pues apreciamos que aunque existe un brusco aumento de la oferta, muchas de ellas no se materializan en una adjudicación
 
 
+La figura 4 muestra la distribución del índice para el año 2022 y el 2023.  En ese sentido se aprecia que ha acaecido una mejora en las oportunidades que reciben las mujeres en el sistema, pues la media por institución para el año 2022 fue de 0.29 mientras que para el año 2023 aumenta a 0,37. Esto también se evidencia al mirar la distribución completa porque se aprecia un desplazamiento de parte importante de las instituciones. 
 
-```{r, out.width = "80%",  echo = FALSE, warning=FALSE}
+Sin embargo, es necesario notar que esta mejora dista bastante del ideal, pues se incluye también una distribución hipotética (en color gris) de cómo debería comportarse el indicador en condiciones más igualitarias, es decir, desplazándose hacia la derecha y centrada al rededor del 1, el valor que indica igualdad de oportunidades en el sistema. 
+
+
+
+```{r, out.width = "80%",  echo = FALSE, warning=FALSE, fig.cap='Distribución del IPPG según organismos del Estado'}
 
 data_plot = readRDS(file = paste0(wd_path,"/data_plot.rds"))
 
@@ -331,32 +355,40 @@ data_plot = readRDS(file = paste0(wd_path,"/data_plot.rds"))
 )
 
 ```
-```{r, echo=FALSE,warning=FALSE, message=FALSE}
 
-data_inst <- read.csv(file = paste0(wd_path, "20231218_data_index_inst.csv"))
+
+
+
+```{r, echo=FALSE,warning=FALSE, message=FALSE, fig.pos='H'}
+
+data_inst <- read.csv(file = paste0(wd_path, "20231218_data_index_inst.csv")) %>% 
+  arrange(desc(IPPG.2023))
+
+
 
 options(knitr.kable.NA = '')
 
 cuadro = data_inst[1:20,c(2, 7,8,13,14,15,16)]
 
-kable(
+kableExtra::kable(
   cuadro,
   col.names = names(cuadro),
   digits = 2,
-  caption = "Empresas con Sello mujer 2022"
-  ) %>% kable_styling(font_size = 7, latex_options="scale_down") %>%
+  caption = "Ranking organismos públicos, 2022-2023"
+  ,booktabs = T
+  ,linesep="") %>%
+  kableExtra::kable_styling(font_size = 7, latex_options = c("striped", "scale_down","hold_position")) %>%
   kableExtra::column_spec(1, width = "3in") 
 
 ```
 
+Por su parte en la tabla 1 se puede apreciar a los 20 organismos del estado que mayor oportunidades proveyeron a las empresas lideradas por mujeres en materia de compras. Tenemos que lidera el ranking Corporación Municipal de las Artes y la Cultura de Río Claro, siendo la única con un valor de 1 en nuestro índice, lo que indica que recibió la misma cantidad de ofertas entre empresas lideradas por hombres y mujeres y a la misma vez, emitió órdenes de compra al mismo número de empresas según Sello. Es necesario notar de todas maneras, que dicho organismo muestra un comportamiento especial pues durante el año 2022 no recibió ofertas ni emitió órdenes de compra, lo que da indiciones de que su volumen de transacciones es pequeño. Dicho comportamiento también se observa en varias corporaciones municipales que pertenecen al ranking, lo que confirma que hasta el momento aquellos organismos compradores con una mejor performance en materia de igualdad de género son más bien excepciones más que la norma en el sistema.
 
 
 # Conclusiones preliminares y pasos a seguir
 
-- Determinar la capacidad discriminativa del indicador realizando cruces adicionales de información 
+En síntesis, el análisis de la igualdad de género durante el período 2022-2023 revela avances generales en el sistema, indicando un progreso positivo. Sin embargo, persiste una brecha significativa entre las empresas lideradas por mujeres y hombres, resaltando la necesidad de abordar desafíos persistentes para lograr una equidad más completa. La diversidad en las distribuciones de los organismos compradores entre ambos años subraya la variabilidad en este aspecto.
 
-- Analizar la evolución del fenómeno mediante la construcción de un índice de carácter temporal 
+Al desglosar cada dimensión del índice, se evidencia que la etapa de inscripción es la de menor igualdad, seguida por la oferta, y en último lugar, la adjudicación. Este hallazgo resulta intrigante desde la perspectiva de la política pública, ya que sugiere que para mejorar las oportunidades de las mujeres, es crucial fomentar su participación en el sistema. Una vez dentro, se observa que sus posibilidades de adjudicar algún procedimiento son más favorables.
 
-- Automatizar la rutina de cálculo del índice para asegurar su oportunidad
-
-- Identificar posibles variables que permitan explicar el comportamiento del índice y de esta manera comprender las razones del fenómeno
+Adicionalmente, se propone la identificación de variables adicionales que puedan explicar el comportamiento del índice. Este enfoque busca comprender las razones subyacentes del fenómeno, facilitando la formulación de estrategias más efectivas para abordar y superar los desafíos persistentes en la igualdad de género en el ámbito empresarial. En conjunto, estos pasos contribuirán a un enfoque más completo y efectivo en la promoción de la equidad de género en el contexto analizado.
